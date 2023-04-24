@@ -1,5 +1,6 @@
 import re
 from urllib.parse import urlparse
+from lxml import html
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -15,7 +16,16 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    return list()
+
+    string_document = html.fromstring(resp.raw_response.content)
+    links = list(string_document.iterlinks())
+    links_set = set()
+    for link in links:
+        # link is a tuple from lxml and the 2 index is the url string
+        # TODO: account for relative links that do not include the domain 
+        print(link[2])
+        links_set.add(link[2].split("#")[0])
+    return links_set
 
 def is_valid(url):
     # Decide whether to crawl this url or not. 
