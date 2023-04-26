@@ -1,10 +1,52 @@
 import re
+from urllib.robotparser import RobotFileParser
 from urllib.parse import urlparse
 from lxml import html
+# from bs4 from importBeautifulSoup as Bst
+GOOD_RESP = 200
+USER_AGENT = 'my-user-agent'
+DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
+
+global_site = set()
+
+
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
+
+# 
+def extract__scheme_and_domain(url): 
+    # return the scheme and domain of the url
+    parts = urlparse(url)
+    # getting the scheme and domain name
+    scheme_and_domain  = f"{parts.scheme}://{parts.netloc}" 
+    return scheme_and_domain
+
+# build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
+def build_robot(domains):
+    
+
+
+# checking the robots.txt file using robotparser
+def check_robots(url): # need path & base url
+    rp = RobotFileParser()
+    rp.set_url(url + '/robots.txt')
+    rp.read()
+    return rp.can_fetch("*", url)
+    # rp.can_fetch(USER_AGENT, url)
+    # if return true, then we can fetch
+    # if return false, then we can't fetch
+
+    pass
+
+        ''' # code to access the robots.txt 
+    # if resp.error == GOOD_RESP:
+    #     parsed = Bst(response.text, 'html.parser')
+    #     agent = 'user_agent'
+          policies = {}
+          for rule ini soup.get_text().split('\n'):
+    '''
 
 def extract_next_links(url, resp):
     # Implementation required.
@@ -16,22 +58,47 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
+    # append "/robots.txt"
+    # print("url: ", url) 
+
+
+    domain_should_match = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
+    
+    
+    if resp.raw_response is None:
+        return list()
+    
+    if resp.status != GOOD_RESP:
+        return list()
 
     string_document = html.fromstring(resp.raw_response.content)
     links = list(string_document.iterlinks())
     links_set = set()
     for link in links:
+        
+
+        link_to_add = link[2]
         # link is a tuple from lxml and the 2 index is the url string
         # check if a link is a relative link
-        if link[2].startswith("/"):
-            # add the domain to the relative link
-            link[2] = resp.url + link[2]
-
-        # check if the link is a valid link
-        if not is_valid(link[2]):
+        if link_to_add.startswith("/") and not link_to_add.startswith("//") and not link_to_add.startswith(".."):
+            # strip away the path from the url
+            scheme_and_domain = extract__scheme_and_domain(url)
+            appended_link = scheme_and_domain + link_to_add
+            link_to_add = appended_link
+        
+        # Checking if the link has a domain that matches the domain
+        if not any([urlparse(link_to_add).netloc.endswith(domain) for domain in domain_should_match]):
+            print("Not a valid domain: " + link_to_add)
+            continue 
+        if global_site.__contains__(link_to_add):
+            print("Already visited: " + link_to_add)
             continue
-        links_set.add(link[2].split("#")[0])
-    return links_set
+        else:
+            global_site.add(link_to_add)
+        links_set.add(link_to_add.split("#")[0])
+    print("Links for " + url + " :")
+    # [print(link) for link in links_set]
+    return [link for link in links_set]
 
 def is_valid(url):
     # Decide whether to crawl this url or not. 
