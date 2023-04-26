@@ -22,8 +22,14 @@ def extract_next_links(url, resp):
     links_set = set()
     for link in links:
         # link is a tuple from lxml and the 2 index is the url string
-        # TODO: account for relative links that do not include the domain 
-        print(link[2])
+        # check if a link is a relative link
+        if link[2].startswith("/"):
+            # add the domain to the relative link
+            link[2] = resp.url + link[2]
+
+        # check if the link is a valid link
+        if not is_valid(link[2]):
+            continue
         links_set.add(link[2].split("#")[0])
     return links_set
 

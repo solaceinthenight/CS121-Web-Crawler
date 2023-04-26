@@ -1,10 +1,9 @@
-ABOUT
--------------------------
+## ABOUT
+
 This is the base implementation of a full crawler that uses a spacetime
 cache server to receive requests.
 
-CONFIGURATION
--------------------------
+## CONFIGURATION
 
 ### Step 1: Install dependencies
 
@@ -17,7 +16,7 @@ Linux: https://docs.python-guide.org/starting/install3/linux/
 MAC: https://docs.python-guide.org/starting/install3/osx/
 
 Check if pip is installed by opening up a terminal/command prompt and typing
-the commands `python3 -m pip`. This should show the help menu for all the 
+the commands `python3 -m pip`. This should show the help menu for all the
 commands possible with pip. If it does not, then get pip by following the
 instructions at https://pip.pypa.io/en/stable/installing/
 
@@ -25,6 +24,7 @@ To install the dependencies for this project run the following two commands
 after ensuring pip is installed for the version of python you are using.
 Admin privileges might be required to execute the commands. Also make sure
 that the terminal is at the root folder of this project.
+
 ```
 python -m pip install packages/spacetime-2.1.1-py3-none-any.whl
 python -m pip install -r packages/requirements.txt
@@ -35,8 +35,8 @@ python -m pip install -r packages/requirements.txt
 Set the options in the config.ini file. The following
 configurations exist.
 
-**USERAGENT**: Set the useragent to `IR F19 uci-id1,uci-id2,uci-id3`. 
-It is important to set the useragent appropriately to get the credit for 
+**USERAGENT**: Set the useragent to `IR F19 uci-id1,uci-id2,uci-id3`.
+It is important to set the useragent appropriately to get the credit for
 hitting our cache.
 
 **HOST**: This is the host name of our caching server. Please set it as per spec.
@@ -54,7 +54,6 @@ crawler from the seed url, you can simply delete this file.
 threads used. Do not change it if you have not implemented multi threading in
 the crawler. The crawler, as it is, is deliberately not thread safe.
 
-
 ### Step 3: Define your scraper rules.
 
 Develop the definition of the function scraper in scraper.py
@@ -68,16 +67,17 @@ The scraper takes in two parameters:
 
 **ARGS**
 
-*url*:
+_url_:
 
 The URL that was added to the frontier, and downloaded from the cache.
 It is of type str and was an url that was previously added to the
 frontier.
 
-*resp*:
+_resp_:
 
 This is the response given by the caching server for the requested URL.
 The response is an object of type Response (see utils/response.py)
+
 ```
 class Response:
     Attributes:
@@ -102,6 +102,7 @@ class Response:
                 https://requests.kennethreitz.org/en/master/api/#requests.Response
             HINT: raw_response.content gives you the webpage html content.
 ```
+
 **Return Value**
 
 This function needs to return a list of urls that are scraped from the
@@ -113,28 +114,26 @@ frontier.
 The first step of filtering the urls can be by using the **is_valid** function
 provided in the same scraper.py file. Additional rules should be added to the is_valid function to filter the urls.
 
-EXECUTION
--------------------------
+## EXECUTION
 
 To execute the crawler run the launch.py command.
-```python3 launch.py```
+`python3 launch.py`
 
 You can restart the crawler from the seed url
 (all current progress will be deleted) using the command
-```python3 launch.py --restart```
+`python3 launch.py --restart`
 
 You can specify a different config file to use by using the command with the option
-```python3 launch.py --config_file path/to/config```
+`python3 launch.py --config_file path/to/config`
 
-ARCHITECTURE
--------------------------
+## ARCHITECTURE
 
 ### FLOW
 
 The crawler receives a cache host and port from the spacetime servers
 and instantiates the config.
 
-It launches a crawler (defined in crawler/\_\_init\_\_.py L5) which creates a 
+It launches a crawler (defined in crawler/\_\_init\_\_.py L5) which creates a
 Frontier and Worker(s) using the optional parameters frontier_factory, and
 worker_factory.
 
@@ -149,6 +148,7 @@ there are no more urls to be downloaded in the frontier.
 
 You can make your own frontier to use with the crawler if they meet this
 interface definition:
+
 ```
 class Frontier:
     def __init__(self, config, restart):
@@ -166,11 +166,12 @@ class Frontier:
     def add_url(self, url):
         # Adds one url to the frontier to be downloaded later.
         # Checks can be made to prevent downloading duplicates.
-    
+
     def mark_url_complete(self, url):
         # mark a url as completed so that on restart, this url is not
         # downloaded again.
 ```
+
 A sample reference is given in utils/frontier.py L10. Note that this
 reference is not thread safe.
 
@@ -178,6 +179,7 @@ reference is not thread safe.
 
 You can make your own worker to use with the crawler if they meet this
 interface definition:
+
 ```
 from scraper import scraper
 from utils.download import download
@@ -201,10 +203,10 @@ class Worker(Thread): # Worker must inherit from Thread or Process.
             > add next_links to frontier
             > sleep for self.config.time_delay
 ```
+
 A sample reference is given in utils/worker.py L9.
 
-THINGS TO KEEP IN MIND
--------------------------
+## THINGS TO KEEP IN MIND
 
 1. It is important to filter out urls that do not point to a webpage. For
    example, PDFs, PPTs, css, js, etc. The is_valid filters a large number of
