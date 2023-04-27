@@ -2,16 +2,30 @@ import re
 from urllib.robotparser import RobotFileParser
 from urllib.parse import urlparse
 from lxml import html
+from math import sqrt, acos # for document similarity
 # from bs4 from importBeautifulSoup as Bst
 GOOD_RESP = 200
 USER_AGENT = 'my-user-agent'
 DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
 
 global_site = set()
+robot_dict = dict()
 
+# build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
+def build_robot(domains):
+    for domain in domains:
+        rp = RobotFileParser()
+        rp.set_url(domain + '/robots.txt')
+        rp.read()
+        robot_dict[domain] = rp
+
+# check if we can fetch the url (permission from robots.txt)
+def check_url_for_robots(url):
+    
 
 
 def scraper(url, resp):
+    build_robot(DOMAINS)
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
 
@@ -31,8 +45,76 @@ def check_robots(url): # need path & base url
     rp.read()
     return rp.can_fetch("*", url)
 
-    pass
 
+
+
+
+# START OF WEBPAGE SIMILARITY CHECK
+# Modified from https://www.geeksforgeeks.org/measuring-the-document-similarity-in-python/
+def dot_product(wc1, wc2):
+    """Compute the dot product of two dictionary vectors."""
+    dp = 0.0
+    for key in wc1:
+        if key in wc2:
+            dp += wc1[key] * wc2[key]
+    return dp
+
+def angle_btwn_vectors(wc1, wc2):
+    """Compute the angle between two dictionary vectors."""
+    numerator = dot_product(wc1, wc2)
+    denominator = sqrt(dot_product(wc1, wc1) * dot_product(wc2, wc2))
+    return acos(numerator / denominator)
+
+def check_similarity(wc1, wc2) # Threshold for similar document: 90%
+    """Check the similarity between two word count dictionaries.
+
+    Args:
+        wc1 (dict): A dictionary of {token:count} pairs denoting word count.
+        wc2 (dict): A dictionary of {token:count} pairs denoting word count.    
+
+    Return:
+        boolean: true if document similarity is greater than or equal to similarity threshold; false otherwise.
+    """
+{
+    similarity_threshold = 0.90
+    return (angle_btwn_vectors(wc1, wc2) >= similarity_threshold)
+}
+# END OF WEBPAGE SIMILARITY CHECK
+
+
+
+
+# START OF WEBPAGE SIMILARITY CHECK
+# Modified from https://www.geeksforgeeks.org/measuring-the-document-similarity-in-python/
+def dot_product(wc1, wc2):
+    """Compute the dot product of two dictionary vectors."""
+    dp = 0.0
+    for key in wc1:
+        if key in wc2:
+            dp += wc1[key] * wc2[key]
+    return dp
+
+def angle_btwn_vectors(wc1, wc2):
+    """Compute the angle between two dictionary vectors."""
+    numerator = dot_product(wc1, wc2)
+    denominator = sqrt(dot_product(wc1, wc1) * dot_product(wc2, wc2))
+    return acos(numerator / denominator)
+
+def check_similarity(wc1, wc2) # Threshold for similar document: 90%
+    """Check the similarity between two word count dictionaries.
+
+    Args:
+        wc1 (dict): A dictionary of {token:count} pairs denoting word count.
+        wc2 (dict): A dictionary of {token:count} pairs denoting word count.    
+
+    Return:
+        boolean: true if document similarity is greater than or equal to similarity threshold; false otherwise.
+    """
+
+    similarity_threshold = 0.90
+    return (angle_btwn_vectors(wc1, wc2) >= similarity_threshold)
+
+# END OF WEBPAGE SIMILARITY CHECK
 
 
 def extract_next_links(url, resp):
