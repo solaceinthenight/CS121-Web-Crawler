@@ -1,6 +1,6 @@
 import re
 from urllib.robotparser import RobotFileParser
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urldefrag
 from lxml import html
 from math import sqrt, acos # for document similarity
 # from bs4 from importBeautifulSoup as Bst
@@ -10,6 +10,8 @@ DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
 
 global_site = set()
 robot_dict = dict()
+longest_page = ""
+total_words = 0
 
 # build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
 def build_robot(domains):
@@ -30,13 +32,17 @@ def scraper(url, resp):
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
 
-# 
 def extract__scheme_and_domain(url): 
     # return the scheme and domain of the url
     parts = urlparse(url)
     # getting the scheme and domain name
     scheme_and_domain  = f"{parts.scheme}://{parts.netloc}" 
     return scheme_and_domain
+
+def write_results():
+    with open("result1.txt", "w+") as file1:
+        file1.write("Unique page count: " + str(len(global_site)) + "\n" )
+        file1.write("Longest page with " + total_words + " words is " + longest_page + "\n")
 
 
 # START OF WEBPAGE SIMILARITY CHECK
@@ -84,40 +90,48 @@ def extract_next_links(url, resp):
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     # append "/robots.txt"
     # print("url: ", url) 
+    
+
+    # checks if the starting fronteir url is valid
     if is_valid(url) == False:
         return list()
 
+    # checks if the raw response has actual content (pages with no content are low information value)
     if resp.raw_response is None:
         return list()
     
+     # checks to ensure a 200 status
     if resp.status != GOOD_RESP:
         return list()
 
-    # Ensure content header type is html
-    
+    # checks to ensure page is in html
     if resp.raw_response.headers.get_content_type() != "text/html":
         return list()
 
-    string_document = html.fromstring(resp.raw_response.content)
+    # add url after it passes all checks, but remove fragment
+    final_url = urldefrag(resp.url)[0]
+    final_url = normalize(final_url)
+    global_site.add(final_url)
+
+
     # get raw text from the html
-    raw_text = string_document.text_content()
+    string_document = html.fromstring(resp.raw_response.content)
+
+    # TODO: check if this line is necessary, we may be only getting one component of the html and not all of them
+    #raw_text = string_document.text_content()
+
+    # retrieve the links from the text and return it
     links = list(string_document.iterlinks())
-    links_set = set()
+    final_list = list()
     for link in links:
-        link_to_add = link[2]
-        if link_to_add.startswith("/") and not link_to_add.startswith("//") and not link_to_add.startswith(".."):
+        link = link[2]
+        link = urldefrag(link)[0]
+        if link.startswith("/") and not link.startswith("//") and not link.startswith(".."):
             scheme_and_domain = extract__scheme_and_domain(url)
-            appended_link = scheme_and_domain + link_to_add
-            link_to_add = appended_link
+            appended_link = scheme_and_domain + link
+            final_list.append(appended_link)
+    return final_list
 
-        like_to_add = normalize(link_to_add)
-        global_site.add(link_to_add)
-
-        links_set.add(link_to_add.split("#")[0])
-
-    print("Links for " + url + " :")
-    # [print(link) for link in links_set]
-    return [link for link in links_set]
 
 def is_valid(url):
     # Decide whether to crawl this url or not. 
@@ -125,10 +139,19 @@ def is_valid(url):
     # There are already some conditions that return False.
     try:
         url = normalize(url)
+
+        # remove the fragment
+        url = urldefrag(url)[0]
+
+        # parse string into scheme, domain, path, query, and fragment
         parsed = urlparse(url)
+
+        # return fals eif not in http or https
         if parsed.scheme not in set(["http", "https"]):
             return False
-        return not re.match(
+
+        # return false if there is a non text file
+        if re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
             + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
@@ -136,21 +159,23 @@ def is_valid(url):
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv"
-            + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
+            + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower()):
+            return False
         
         # check if the url is a valid domain
-        domain_should_match = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
-        if not re.match(r".*\.ics\.uci\.edu|.*\.cs\.uci\.edu|.*\.informatics\.uci\.edu|.*\.stat\.uci\.edu", parsed.netloc.lower()):
+        if not re.match(r"(.+\.)?ics\.uci\.edu|(.+\.)?cs\.uci\.edu|(.+\.)?informatics\.uci\.edu|(.+\.)?stat\.uci\.edu", parsed.hostname.lower()):
             return False
         
-        if re.match(r"^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$", url):
+        # checks if the url has a repeating directory in the path to prevent traps
+        # does not cover pages that may have been revisted before the second occurence of the directory in question
+        if re.match(r"^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$", parsed.path.lower()):
             return False
 
-        if global_site.__contains__(url):
+        # checks if the url is already in the global set to prevent traps
+        if url in global_site:
             return False
         
-
-            
+        # return true if nothing fails in the if checks
         return True
 
 
