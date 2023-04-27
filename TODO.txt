@@ -1,0 +1,14 @@
+TODO:
+
+- format so that most of code is in_valid
+- check for traps
+- check for low information value and define it
+- check for stop words
+- check re expression for tokenizer
+- check only links with correct domains
+- status issue with 604
+- do not include fragment IDs
+- transform relative to abs urls
+- check config
+- do http https check
+- do not include query sites

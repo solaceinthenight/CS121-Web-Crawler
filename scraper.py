@@ -38,7 +38,7 @@ def extract__scheme_and_domain(url):
 #     # if return true, then we can fetch
 #     # if return false, then we can't fetch
 
-        ''' # code to access the robots.txt 
+    ''' # code to access the robots.txt 
     # if resp.error == GOOD_RESP:
     #     parsed = Bst(response.text, 'html.parser')
     #     agent = 'user_agent'
