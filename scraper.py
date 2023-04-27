@@ -21,7 +21,8 @@ def build_robot(domains):
 
 # check if we can fetch the url (permission from robots.txt)
 def check_url_for_robots(url):
-    
+    parts = urlparse(url)
+    return robot_dict[parts.hostname].can_fetch(*, url)
 
 
 def scraper(url, resp):
