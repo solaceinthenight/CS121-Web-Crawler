@@ -23,10 +23,6 @@ def extract__scheme_and_domain(url):
     scheme_and_domain  = f"{parts.scheme}://{parts.netloc}" 
     return scheme_and_domain
 
-# build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
-def build_robot(domains):
-    
-
 
 # checking the robots.txt file using robotparser
 def check_robots(url): # need path & base url
@@ -34,19 +30,10 @@ def check_robots(url): # need path & base url
     rp.set_url(url + '/robots.txt')
     rp.read()
     return rp.can_fetch("*", url)
-    # rp.can_fetch(USER_AGENT, url)
-    # if return true, then we can fetch
-    # if return false, then we can't fetch
 
     pass
 
-        ''' # code to access the robots.txt 
-    # if resp.error == GOOD_RESP:
-    #     parsed = Bst(response.text, 'html.parser')
-    #     agent = 'user_agent'
-          policies = {}
-          for rule ini soup.get_text().split('\n'):
-    '''
+
 
 def extract_next_links(url, resp):
     # Implementation required.
@@ -60,42 +47,37 @@ def extract_next_links(url, resp):
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     # append "/robots.txt"
     # print("url: ", url) 
+    if is_valid(url) == False:
+        return list()
 
-
-    domain_should_match = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
-    
-    
     if resp.raw_response is None:
         return list()
     
     if resp.status != GOOD_RESP:
         return list()
 
+    # Ensure content header type is html
+    
+    if resp.raw_response.headers.get_content_type() != "text/html":
+        return list()
+
     string_document = html.fromstring(resp.raw_response.content)
+    # get raw text from the html
+    raw_text = string_document.text_content()
     links = list(string_document.iterlinks())
     links_set = set()
     for link in links:
-        
-
+    
         link_to_add = link[2]
-        # link is a tuple from lxml and the 2 index is the url string
-        # check if a link is a relative link
         if link_to_add.startswith("/") and not link_to_add.startswith("//") and not link_to_add.startswith(".."):
-            # strip away the path from the url
             scheme_and_domain = extract__scheme_and_domain(url)
             appended_link = scheme_and_domain + link_to_add
             link_to_add = appended_link
-        
-        # Checking if the link has a domain that matches the domain
-        if not any([urlparse(link_to_add).netloc.endswith(domain) for domain in domain_should_match]):
-            print("Not a valid domain: " + link_to_add)
-            continue 
-        if global_site.__contains__(link_to_add):
-            print("Already visited: " + link_to_add)
-            continue
-        else:
-            global_site.add(link_to_add)
+
+        global_site.add(url)
+
         links_set.add(link_to_add.split("#")[0])
+
     print("Links for " + url + " :")
     # [print(link) for link in links_set]
     return [link for link in links_set]
@@ -105,6 +87,7 @@ def is_valid(url):
     # If you decide to crawl it, return True; otherwise return False.
     # There are already some conditions that return False.
     try:
+        url = normalize(url)
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
@@ -117,6 +100,22 @@ def is_valid(url):
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
+        
+        # check if the url is a valid domain
+        domain_should_match = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
+        if not re.match(r".*\.ics\.uci\.edu|.*\.cs\.uci\.edu|.*\.informatics\.uci\.edu|.*\.stat\.uci\.edu", parsed.netloc.lower()):
+            return False
+        
+        if re.match(r"^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$", url):
+            return False
+
+        if global_site.__contains__(url):
+            return False
+        
+
+            
+        return True
+
 
     except TypeError:
         print ("TypeError for ", parsed)
