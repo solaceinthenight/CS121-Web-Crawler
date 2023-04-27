@@ -9,7 +9,6 @@ TODO:
 - status issue with 604
 - do not include fragment IDs
 - transform relative to abs urls
-- check config
 - do http https check
 - do not include query sites
 - comment what code does for interview
@@ -17,3 +16,7 @@ TODO:
 extra credit:
 - robot and sitemaps
 - git
+
+
+Done:
+- check config
