@@ -12,3 +12,8 @@ TODO:
 - check config
 - do http https check
 - do not include query sites
+- comment what code does for interview
+
+extra credit:
+- robot and sitemaps
+- git
