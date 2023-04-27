@@ -23,22 +23,20 @@ def extract__scheme_and_domain(url):
     scheme_and_domain  = f"{parts.scheme}://{parts.netloc}" 
     return scheme_and_domain
 
-# build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
-def build_robot(domains):
-    
+# # build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
+# def build_robot(domains): # TODO: focus on later.. since it's extra credit
+#     pass
 
 
-# checking the robots.txt file using robotparser
-def check_robots(url): # need path & base url
-    rp = RobotFileParser()
-    rp.set_url(url + '/robots.txt')
-    rp.read()
-    return rp.can_fetch("*", url)
-    # rp.can_fetch(USER_AGENT, url)
-    # if return true, then we can fetch
-    # if return false, then we can't fetch
-
-    pass
+# # checking the robots.txt file using robotparser
+# def check_robots(url): # TODO: need path & base url ++ fix later if time
+#     rp = RobotFileParser()
+#     rp.set_url(url + '/robots.txt')
+#     rp.read()
+#     return rp.can_fetch("*", url)
+#     # rp.can_fetch(USER_AGENT, url)
+#     # if return true, then we can fetch
+#     # if return false, then we can't fetch
 
         ''' # code to access the robots.txt 
     # if resp.error == GOOD_RESP:
