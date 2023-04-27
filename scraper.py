@@ -48,6 +48,7 @@ def extract__scheme_and_domain(url):
     '''
 
 
+
 # START OF WEBPAGE SIMILARITY CHECK
 # Modified from https://www.geeksforgeeks.org/measuring-the-document-similarity-in-python/
 def dot_product(wc1, wc2):
@@ -75,7 +76,7 @@ def check_similarity(wc1, wc2) # Threshold for similar document: 90%
         boolean: true if document similarity is greater than or equal to similarity threshold; false otherwise.
     """
 {
-    similarity_threshold = 90
+    similarity_threshold = 0.90
     return (angle_btwn_vectors(wc1, wc2) >= similarity_threshold)
 }
 # END OF WEBPAGE SIMILARITY CHECK
