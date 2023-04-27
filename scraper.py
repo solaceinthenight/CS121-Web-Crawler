@@ -22,7 +22,7 @@ def build_robot(domains):
 # check if we can fetch the url (permission from robots.txt)
 def check_url_for_robots(url):
     parts = urlparse(url)
-    return robot_dict[parts.hostname].can_fetch(*, url)
+    return robot_dict[parts.hostname].can_fetch("*", url)
 
 
 def scraper(url, resp):
@@ -55,7 +55,7 @@ def angle_btwn_vectors(wc1, wc2):
     denominator = sqrt(dot_product(wc1, wc1) * dot_product(wc2, wc2))
     return acos(numerator / denominator)
 
-def check_similarity(wc1, wc2) # Threshold for similar document: 90%
+def check_similarity(wc1, wc2): # Threshold for similar document: 90%
     """Check the similarity between two word count dictionaries.
 
     Args:
@@ -104,14 +104,14 @@ def extract_next_links(url, resp):
     links = list(string_document.iterlinks())
     links_set = set()
     for link in links:
-    
         link_to_add = link[2]
         if link_to_add.startswith("/") and not link_to_add.startswith("//") and not link_to_add.startswith(".."):
             scheme_and_domain = extract__scheme_and_domain(url)
             appended_link = scheme_and_domain + link_to_add
             link_to_add = appended_link
 
-        global_site.add(url)
+        like_to_add = normalize(link_to_add)
+        global_site.add(link_to_add)
 
         links_set.add(link_to_add.split("#")[0])
 
