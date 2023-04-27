@@ -9,10 +9,23 @@ USER_AGENT = 'my-user-agent'
 DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
 
 global_site = set()
+robot_dict = dict()
 
+# build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
+def build_robot(domains):
+    for domain in domains:
+        rp = RobotFileParser()
+        rp.set_url(domain + '/robots.txt')
+        rp.read()
+        robot_dict[domain] = rp
+
+# check if we can fetch the url (permission from robots.txt)
+def check_url_for_robots(url):
+    
 
 
 def scraper(url, resp):
+    build_robot(DOMAINS)
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
 
@@ -24,9 +37,8 @@ def extract__scheme_and_domain(url):
     scheme_and_domain  = f"{parts.scheme}://{parts.netloc}" 
     return scheme_and_domain
 
-# # build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
-# def build_robot(domains): # TODO: focus on later.. since it's extra credit
-#     pass
+
+
 
 
 # # checking the robots.txt file using robotparser
