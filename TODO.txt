@@ -1,13 +1,8 @@
 TODO:
-
+- add http and https to any link, and make sure same link with different scheme is considered one link
 - check for low information value and define it
-- check for stop words
-- check re expression for tokenizer
-- status issue with 604
-- do not include query sites?
 - comment what code does for interview
-- check if we need to do text_content for retrieving urls, might cause us to miss some
-- check for urls that should not be added where the page is accessed in a round about wayDetect and avoid sets of similar pages with no information
+- check for urls that should not be added where the page is accessed in a round about way
 - Detect redirects and if the page redirects your crawler, index the redirected content
 - Detect and avoid dead URLs that return a 200 status but no data (click here to see what the different HTTP status codes meanLinks to an external site.)
 - Detect and avoid crawling very large files, especially if they have low information value
@@ -29,3 +24,6 @@ Done:
 - do not include fragment IDs
 - transform relative to abs urls
 - do http https check
+- check re expression for tokenizer
+- status issue with 604
+- check for stop words
