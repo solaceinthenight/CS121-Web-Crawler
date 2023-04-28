@@ -15,6 +15,7 @@ robot_dict = dict()
 longest_page = ""
 total_words = 0
 token_map = {}
+most_recent = list() # Five most recent 
 stopwords = ['a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', "aren't", 'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', "can't", 'cannot', 'could', "couldn't", 'did', "didn't", 'do', 'does', "doesn't", 'doing', "don't", 'down', 'during', 'each', 'few', 'for', 'from', 'further', 'had', "hadn't", 'has', "hasn't", 'have', "haven't", 'having', 'he', "he'd", "he'll", "he's", 'her', 'here', "here's", 'hers', 'herself', 'him', 'himself', 'his', 'how', "how's", 'i', "i'd", "i'll", "i'm", "i've", 'if', 'in', 'into', 'is', "isn't", 'it', "it's", 'its', 'itself', "let's", 'me', 'more', 'most', "mustn't", 'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', "shan't", 'she', "she'd", "she'll", "she's", 'should', "shouldn't", 'so', 'some', 'such', 'than', 'that', "that's", 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', "there's", 'these', 'they', "they'd", "they'll", "they're", "they've", 'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was', "wasn't", 'we', "we'd", "we'll", "we're", "we've", 'were', "weren't", 'what', "what's", 'when', "when's", 'where', "where's", 'which', 'while', 'who', "who's", 'whom', 'why', "why's", 'with', "won't", 'would', "wouldn't", 'you', "you'd", "you'll", "you're", "you've", 'your', 'yours', 'yourself', 'yourselves']
 
 # build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
@@ -59,6 +60,7 @@ def write_results():
     global global_site
     global token_map
     global subdomains
+    global most_recent
     
     with open("result1.txt", "w+") as file1:
         file1.write("Unique page count: " + str(len(global_site)) + "\n\n" )
@@ -82,7 +84,7 @@ def tokenize(text):
     tokens = [t.lower() for t in tokens if len(t) > 1]
     return tokens
 
-def compute_word_frequencies(token_list):
+def compute_word_frequencies(token_list): # Makes use of the global token_map
     # the for loop adds a token to the dict if it does not already exist as a key, and then increments an existing
     # token key if it shows up again
     for token in token_list:
@@ -91,7 +93,30 @@ def compute_word_frequencies(token_list):
                 token_map[token] += 1
             else:
                 token_map[token] = 1
-            
+
+def compute_word_count(token_list) -> dict:
+    wc = dict()
+    for token in token_list:
+        if token not in stopwords:
+            if token in wc:
+                wc[token] += 1
+            else:
+                wc[token] = 1
+    return wc
+
+def append_wc(wc) -> None:
+    """Word count wc is appended onto token_map."""
+    for word, count in wc.items():
+        if word in token_map:
+            token_map[word] += count
+        else:
+            token_map[word] = count
+
+def update_most_recent(wc) -> None:
+    """Given the current word count, add it to most_recent (list), keeping len(most_recent) <= 5."""
+    most_recent.append(wc)
+    if len(most_recent) > 5:
+        del most_recent[0]
 
 
 # START OF WEBPAGE SIMILARITY CHECK
@@ -123,6 +148,13 @@ def check_similarity(wc1, wc2): # Threshold for similar document: 90%
 
     similarity_threshold = 0.90
     return (angle_btwn_vectors(wc1, wc2) >= similarity_threshold)
+
+def check_most_recent(wc) -> bool:
+    """Check the similarity of the word count with the most_recent (list)."""
+    for recent in most_recent:
+        if check_similarity(recent, wc):
+            return True # Similar
+    return False # Not similar
 # END OF WEBPAGE SIMILARITY CHECK
 
 
@@ -143,6 +175,7 @@ def extract_next_links(url, resp):
     global global_site
     global token_map
     global subdomains
+    global most_recent
     
 
     try:
@@ -182,6 +215,8 @@ def extract_next_links(url, resp):
         # update token map without stop words
         compute_word_frequencies(words)
 
+        # compute a word count dictionary
+        # wc = compute_word_count(words) # NEED LOGIC CHECKINGs
         
         parsed_domain =  urlparse(final_url)
         sub_hostname = parsed_domain.hostname
