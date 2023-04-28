@@ -17,7 +17,7 @@ total_words = 0
 def build_robot(domains):
     for domain in domains:
         rp = RobotFileParser()
-        rp.set_url(domain + '/robots.txt')
+        rp.set_url('https://www.' + domain + '/robots.txt')
         rp.read()
         robot_dict[domain] = rp
 
@@ -74,7 +74,6 @@ def check_similarity(wc1, wc2): # Threshold for similar document: 90%
 
     similarity_threshold = 0.90
     return (angle_btwn_vectors(wc1, wc2) >= similarity_threshold)
-
 # END OF WEBPAGE SIMILARITY CHECK
 
 
@@ -110,7 +109,7 @@ def extract_next_links(url, resp):
 
     # add url after it passes all checks, but remove fragment
     final_url = urldefrag(resp.url)[0]
-    final_url = normalize(final_url)
+    final_url = normalize(final_url) # NameError: name 'normalize' is not defined
     global_site.add(final_url)
 
 
@@ -138,7 +137,7 @@ def is_valid(url):
     # If you decide to crawl it, return True; otherwise return False.
     # There are already some conditions that return False.
     try:
-        url = normalize(url)
+        url = normalize(url) # NameError: name 'normalize' is not defined
 
         # remove the fragment
         url = urldefrag(url)[0]
