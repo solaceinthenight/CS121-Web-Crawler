@@ -77,8 +77,9 @@ def write_results():
 
 def tokenize(text):
     # declares list to return and compiles an re expression to match
-    comp = re.compile(r"[a-zA-Z0-9'-]+")
+    comp = re.compile(r"[a-zA-Z0-9'’-]+")
     tokens = re.findall(comp, text)
+    tokens = [t.lower() for t in tokens if len(t) > 1]
     return tokens
 
 def compute_word_frequencies(token_list):
