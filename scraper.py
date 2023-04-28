@@ -2,6 +2,7 @@ import re
 from urllib.robotparser import RobotFileParser
 from urllib.parse import urlparse, urldefrag
 from lxml import html
+from bs4 import BeautifulSoup
 from math import sqrt, acos # for document similarity
 # from bs4 from importBeautifulSoup as Bst
 GOOD_RESP = 200
@@ -33,7 +34,17 @@ def check_url_for_robots(url):
 def scraper(url, resp):
     build_robot(DOMAINS)
     links = extract_next_links(url, resp)
-    return [link for link in links if is_valid(link)]
+
+    link_results = []
+    for link in links:
+        valid = is_valid(link)
+        if valid:
+            link_results.append(link)
+        with open("valid.txt", "a") as file1:
+            file1.write(str(link) + " is " + str(valid) + "\n")
+    return link_results
+
+    # return [link for link in links if is_valid(link)]
 
 def extract__scheme_and_domain(url): 
     # return the scheme and domain of the url
@@ -158,10 +169,10 @@ def extract_next_links(url, resp):
 
 
         # get raw text from the html
-        string_document = html.fromstring(resp.raw_response.content)
+        string_document = BeautifulSoup(resp.raw_response.content, "html.parser") #html.fromstring(resp.raw_response.content)
 
         # get word count by using tokenizer
-        raw_text = string_document.text_content()
+        raw_text = string_document.get_text() #string_document.text_content()
         words = tokenize(raw_text)
         if len(words) > total_words:
             total_words = len(words)
@@ -175,10 +186,8 @@ def extract_next_links(url, resp):
         sub_hostname = parsed_domain.hostname
         sub_scheme = parsed_domain.scheme
 
-
         if sub_hostname[0:4] == "www.":
             sub_hostname = sub_hostname[4:]
-
 
         if re.match(r".+\.ics\.uci\.edu", sub_hostname):
 
@@ -193,15 +202,15 @@ def extract_next_links(url, resp):
         write_results()
 
         # retrieve the links from the text and return it
-        links = list(string_document.iterlinks())
+        links =  string_document.find_all("a") #list(string_document.iterlinks())
         final_list = list()
         for link in links:
-            link = link[2]
+            link = link.get("href") #link = link[2]
             link = urldefrag(link)[0]
             if link.startswith("/") and not link.startswith("//") and not link.startswith(".."):
                 scheme_and_domain = extract__scheme_and_domain(url)
-                appended_link = scheme_and_domain + link
-                final_list.append(appended_link)
+                link = scheme_and_domain + link
+            final_list.append(link)
         return final_list
     except Exception as e:
         print("Hello im here: ")
