@@ -12,6 +12,8 @@ global_site = set()
 robot_dict = dict()
 longest_page = ""
 total_words = 0
+token_map = {}
+stopwords = ['a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', "aren't", 'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', "can't", 'cannot', 'could', "couldn't", 'did', "didn't", 'do', 'does', "doesn't", 'doing', "don't", 'down', 'during', 'each', 'few', 'for', 'from', 'further', 'had', "hadn't", 'has', "hasn't", 'have', "haven't", 'having', 'he', "he'd", "he'll", "he's", 'her', 'here', "here's", 'hers', 'herself', 'him', 'himself', 'his', 'how', "how's", 'i', "i'd", "i'll", "i'm", "i've", 'if', 'in', 'into', 'is', "isn't", 'it', "it's", 'its', 'itself', "let's", 'me', 'more', 'most', "mustn't", 'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', "shan't", 'she', "she'd", "she'll", "she's", 'should', "shouldn't", 'so', 'some', 'such', 'than', 'that', "that's", 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', "there's", 'these', 'they', "they'd", "they'll", "they're", "they've", 'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was', "wasn't", 'we', "we'd", "we'll", "we're", "we've", 'were', "weren't", 'what', "what's", 'when', "when's", 'where', "where's", 'which', 'while', 'who', "who's", 'whom', 'why', "why's", 'with', "won't", 'would', "wouldn't", 'you', "you'd", "you'll", "you're", "you've", 'your', 'yours', 'yourself', 'yourselves']
 
 # build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
 def build_robot(domains):
@@ -43,6 +45,25 @@ def write_results():
     with open("result1.txt", "w+") as file1:
         file1.write("Unique page count: " + str(len(global_site)) + "\n" )
         file1.write("Longest page with " + total_words + " words is " + longest_page + "\n")
+        file1.write()
+
+def tokenize(text):
+    # declares list to return and compiles an re expression to match
+    comp = re.compile(r"[a-zA-Z0-9'-]+")
+    tokens = re.findall(comp, text)
+    return tokens
+
+def compute_word_frequencies(token_list):
+    # the for loop adds a token to the dict if it does not already exist as a key, and then increments an existing
+    # token key if it shows up again
+    for token in token_list:
+        if token not in stopwords:
+            if token_map.get(token):
+                token_map[token] += 1
+            else:
+                token_map[token] = 1
+    return token_map
+            
 
 
 # START OF WEBPAGE SIMILARITY CHECK
