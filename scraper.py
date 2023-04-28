@@ -8,6 +8,7 @@ GOOD_RESP = 200
 USER_AGENT = 'my-user-agent'
 DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
 
+subdomains = dict()
 global_site = set()
 robot_dict = dict()
 longest_page = ""
@@ -38,7 +39,7 @@ def extract__scheme_and_domain(url):
     # return the scheme and domain of the url
     parts = urlparse(url)
     # getting the scheme and domain name
-    scheme_and_domain  = f"{parts.scheme}://{parts.netloc}" 
+    scheme_and_domain  = f"{parts.scheme}://{parts.hostname}" 
     return scheme_and_domain
 
 def write_results():
@@ -46,15 +47,20 @@ def write_results():
     global longest_page
     global global_site
     global token_map
+    global subdomains
     
     with open("result1.txt", "w+") as file1:
-        file1.write("Unique page count: " + str(len(global_site)) + "\n" )
-        file1.write("Longest page with " + total_words + " words is " + longest_page + "\n")
+        file1.write("Unique page count: " + str(len(global_site)) + "\n\n" )
+        file1.write("Longest page with " + str(total_words) + " words is " + str(longest_page) + "\n\n")
         file1.write("50 most reocurring words in order from greatest to least:\n")
         l = list(token_map.items())
         l = sorted(l, key=lambda z: (-z[1],z[0]))
         for i in range(0,min(50, len(l))):
             file1.write(str(l[i]) + "\n")
+        file1.write("\nSubdomains of ics.uci.edu:\n")
+        for k,v in subdomains.items():
+            file1.write(k + ": " + str(v) + "\n")
+
             
 
 
@@ -124,6 +130,7 @@ def extract_next_links(url, resp):
     global longest_page
     global global_site
     global token_map
+    global subdomains
     
 
     try:
@@ -163,9 +170,27 @@ def extract_next_links(url, resp):
         # update token map without stop words
         compute_word_frequencies(words)
 
+        
+        parsed_domain =  urlparse(final_url)
+        sub_hostname = parsed_domain.hostname
+        sub_scheme = parsed_domain.scheme
+
+
+        if sub_hostname[0:4] == "www.":
+            sub_hostname = sub_hostname[4:]
+
+
+        if re.match(r".+\.ics\.uci\.edu", sub_hostname):
+
+            final_url_domain =  f"{sub_scheme}://{sub_hostname}"
+
+            if subdomains.get(final_url_domain):
+                subdomains[final_url_domain] += 1
+            else:
+                subdomains[final_url_domain] = 1
+
         # write results
         write_results()
-        
 
         # retrieve the links from the text and return it
         links = list(string_document.iterlinks())
@@ -178,7 +203,9 @@ def extract_next_links(url, resp):
                 appended_link = scheme_and_domain + link
                 final_list.append(appended_link)
         return final_list
-    except:
+    except Exception as e:
+        print("Hello im here: ")
+        print(e)
         write_results()
         return []
 
