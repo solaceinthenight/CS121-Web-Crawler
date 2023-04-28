@@ -45,7 +45,13 @@ def write_results():
     with open("result1.txt", "w+") as file1:
         file1.write("Unique page count: " + str(len(global_site)) + "\n" )
         file1.write("Longest page with " + total_words + " words is " + longest_page + "\n")
-        file1.write()
+        file1.write("50 most reocurring words in order from greatest to least:\n")
+        l = list(token_map.items())
+        l = sorted(l, key=lambda z: (-z[1],z[0]))
+        for i in range(0,min(50, len(l))):
+            file1.write(str(l[i]) + "\n")
+            
+
 
 def tokenize(text):
     # declares list to return and compiles an re expression to match
@@ -62,7 +68,6 @@ def compute_word_frequencies(token_list):
                 token_map[token] += 1
             else:
                 token_map[token] = 1
-    return token_map
             
 
 
@@ -137,8 +142,15 @@ def extract_next_links(url, resp):
     # get raw text from the html
     string_document = html.fromstring(resp.raw_response.content)
 
-    # TODO: check if this line is necessary, we may be only getting one component of the html and not all of them
-    #raw_text = string_document.text_content()
+    # get word count by using tokenizer
+    raw_text = string_document.text_content()
+    words = tokenize(raw_text)
+    if len(words) > total_words:
+        total_words = len(words)
+        longest_page = final_url
+    
+    # update token map without stop words
+    compute_word_frequencies(words)
 
     # retrieve the links from the text and return it
     links = list(string_document.iterlinks())
