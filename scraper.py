@@ -42,6 +42,11 @@ def extract__scheme_and_domain(url):
     return scheme_and_domain
 
 def write_results():
+    global total_words
+    global longest_page
+    global global_site
+    global token_map
+    
     with open("result1.txt", "w+") as file1:
         file1.write("Unique page count: " + str(len(global_site)) + "\n" )
         file1.write("Longest page with " + total_words + " words is " + longest_page + "\n")
@@ -115,54 +120,67 @@ def extract_next_links(url, resp):
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     # append "/robots.txt"
     # print("url: ", url) 
+    global total_words
+    global longest_page
+    global global_site
+    global token_map
     
 
-    # checks if the starting fronteir url is valid
-    if is_valid(url) == False:
-        return list()
+    try:
+        # checks if the starting fronteir url is valid
+        if is_valid(url) == False:
+            return list()
 
-    # checks if the raw response has actual content (pages with no content are low information value)
-    if resp.raw_response is None:
-        return list()
-    
-     # checks to ensure a 200 status
-    if resp.status != GOOD_RESP:
-        return list()
+        # checks if the raw response has actual content (pages with no content are low information value)
+        if resp.raw_response is None:
+            return list()
+        
+        # checks to ensure a 200 status
+        if resp.status != GOOD_RESP:
+            return list()
 
-    # checks to ensure page is in html
-    if resp.raw_response.headers.get_content_type() != "text/html":
-        return list()
+        # checks to ensure page is in html 
+        # TODO: AttributeError: 'CaseInsensitiveDict' object has no attribute 'get_content_type'
+        # if resp.raw_response.headers.get_content_type() != "text/html":
+        #     return list()
 
-    # add url after it passes all checks, but remove fragment
-    final_url = urldefrag(resp.url)[0]
-    final_url = normalize(final_url) # NameError: name 'normalize' is not defined
-    global_site.add(final_url)
+        # add url after it passes all checks, but remove fragment
+        final_url = urldefrag(resp.url)[0]
+        #final_url = normalize(final_url) # NameError: name 'normalize' is not defined
+        global_site.add(final_url)
 
 
-    # get raw text from the html
-    string_document = html.fromstring(resp.raw_response.content)
+        # get raw text from the html
+        string_document = html.fromstring(resp.raw_response.content)
 
-    # get word count by using tokenizer
-    raw_text = string_document.text_content()
-    words = tokenize(raw_text)
-    if len(words) > total_words:
-        total_words = len(words)
-        longest_page = final_url
-    
-    # update token map without stop words
-    compute_word_frequencies(words)
+        # get word count by using tokenizer
+        raw_text = string_document.text_content()
+        words = tokenize(raw_text)
+        if len(words) > total_words:
+            total_words = len(words)
+            longest_page = final_url
+        
+        # update token map without stop words
+        compute_word_frequencies(words)
 
-    # retrieve the links from the text and return it
-    links = list(string_document.iterlinks())
-    final_list = list()
-    for link in links:
-        link = link[2]
-        link = urldefrag(link)[0]
-        if link.startswith("/") and not link.startswith("//") and not link.startswith(".."):
-            scheme_and_domain = extract__scheme_and_domain(url)
-            appended_link = scheme_and_domain + link
-            final_list.append(appended_link)
-    return final_list
+        # write results
+        write_results()
+        
+
+        # retrieve the links from the text and return it
+        links = list(string_document.iterlinks())
+        final_list = list()
+        for link in links:
+            link = link[2]
+            link = urldefrag(link)[0]
+            if link.startswith("/") and not link.startswith("//") and not link.startswith(".."):
+                scheme_and_domain = extract__scheme_and_domain(url)
+                appended_link = scheme_and_domain + link
+                final_list.append(appended_link)
+        return final_list
+    except:
+        write_results()
+        return []
 
 
 def is_valid(url):
@@ -170,7 +188,7 @@ def is_valid(url):
     # If you decide to crawl it, return True; otherwise return False.
     # There are already some conditions that return False.
     try:
-        url = normalize(url) # NameError: name 'normalize' is not defined
+        #url = normalize(url) # NameError: name 'normalize' is not defined
 
         # remove the fragment
         url = urldefrag(url)[0]
