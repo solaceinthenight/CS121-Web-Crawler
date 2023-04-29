@@ -1,0 +1,83 @@
+Unique page count: 35447
+
+Longest page with 398882 words is https://cbcl.ics.uci.edu/lib/exe/fetch.php?tok=660235&media=http%3A%2F%2Flocalwiki.net%2Firvine%2Faldrich%2520park%2F_files%2FPano%2520Aldrich%2520Park%2520UCI.jpg
+
+50 most reocurring words in order from greatest to least:
+('xhx', 3841957)
+('http', 3608106)
+('www', 2743435)
+('xie', 2275332)
+('2013', 2098527)
+('2014', 1590704)
+('edu', 1539196)
+('pdf', 1506396)
+('publications', 1345061)
+('uci', 1218480)
+('ics', 1160454)
+('10', 1152823)
+('com', 988664)
+('02', 960654)
+('org', 945230)
+('11', 859142)
+('05', 798171)
+('23', 744860)
+('bioinformatics', 699608)
+('12', 685167)
+('16', 684710)
+('content', 671906)
+('nature', 666581)
+('15', 640698)
+('04', 625897)
+('14', 603693)
+('20', 597834)
+('2015', 568700)
+('genome', 549480)
+('2016', 544383)
+('13', 537068)
+('news', 528119)
+('2010', 520199)
+('22', 519760)
+('21', 501078)
+('2009', 489873)
+('2017', 478380)
+('01', 440190)
+('cgi', 428907)
+('learning', 410509)
+('03', 396781)
+('neural', 388448)
+('25', 387510)
+('supplementary', 385136)
+('journal', 373881)
+('2006', 365951)
+('abstract', 365256)
+('information', 364402)
+('09', 346445)
+('analysis', 337961)
+
+Subdomains of ics.uci.edu:
+http://futurehealth.ics.uci.edu: 27
+https://transformativeplay.ics.uci.edu: 56
+http://evoke.ics.uci.edu: 1
+https://evoke.ics.uci.edu: 4
+https://wearablegames.ics.uci.edu: 11
+http://sdcl.ics.uci.edu: 204
+https://sdcl.ics.uci.edu: 1
+http://stairs.ics.uci.edu: 4
+http://cradl.ics.uci.edu: 11
+https://cradl.ics.uci.edu: 9
+https://redmiles.ics.uci.edu: 4
+https://student-council.ics.uci.edu: 19
+https://hack.ics.uci.edu: 1
+http://graphics.ics.uci.edu: 2
+https://acoi.ics.uci.edu: 70
+https://vision.ics.uci.edu: 10
+http://vision.ics.uci.edu: 185
+https://cml.ics.uci.edu: 2
+https://duttgroup.ics.uci.edu: 25
+https://studentcouncil.ics.uci.edu: 19
+https://cbcl.ics.uci.edu: 34105
+http://cbcl.ics.uci.edu: 11
+http://motifmap.ics.uci.edu: 2
+http://motifmap-rna.ics.uci.edu: 1
+http://ipubmed.ics.uci.edu: 1
+http://hobbes.ics.uci.edu: 1
