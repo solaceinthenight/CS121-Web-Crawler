@@ -8,6 +8,7 @@ from math import sqrt, acos # for document similarity
 GOOD_RESP = 200
 USER_AGENT = 'my-user-agent'
 DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
+LOW_INFO_THRES = 0.1
 
 subdomains = dict()
 global_site = set()
@@ -61,11 +62,12 @@ def write_results():
     global token_map
     global subdomains
     global most_recent
+    global info_value
     
     with open("result1.txt", "w+") as file1:
         file1.write("Unique page count: " + str(len(global_site)) + "\n\n" )
         file1.write("Longest page with " + str(total_words) + " words is " + str(longest_page) + "\n\n")
-        file1.write("50 most reocurring words in order from greatest to least:\n")
+        file1.write("50 most recurring words in order from greatest to least:\n")
         l = list(token_map.items())
         l = sorted(l, key=lambda z: (-z[1],z[0]))
         for i in range(0,min(50, len(l))):
@@ -74,9 +76,13 @@ def write_results():
         for k,v in subdomains.items():
             file1.write(k + ": " + str(v) + "\n")
 
+    # calculate the information value of each page by comparing it's unique words to total words
+    if total_words > 0:
+        info_value = len(set(total_words)) / len(total_words) 
+    else:
+        info_value = 0
+    
             
-
-
 def tokenize(text):
     # declares list to return and compiles an re expression to match
     comp = re.compile(r"[a-zA-Z0-9'’-]+")
@@ -179,14 +185,17 @@ def extract_next_links(url, resp):
     
 
     try:
-        # checks if the starting fronteir url is valid
+        # checks if the starting frontier url is valid
         if is_valid(url) == False:
             return list()
 
         # checks if the raw response has actual content (pages with no content are low information value)
         if resp.raw_response is None:
             return list()
-        
+        # if less than the low information value (25), then the page is not counted
+        elif info_value >= LOW_INFO_THRES:
+            return list()
+
         # checks to ensure a 200 status
         if resp.status != GOOD_RESP:
             return list()
