@@ -1,3 +1,29 @@
+'''
+This module contains the webscraper which extracts and stores necessary page information 
+to go about crawling in a polite way with respect to site policies (robots.txt)
+
+# The implemented functions are:
+
+def build_robot(array of string)
+def check_url_for_robots(string)
+def scraper(string, int)
+def extract_scheme_and_domain(string)
+def write_results(string)
+def tokenize()
+def compute_word_frequencies(list)
+def compute_word_count(dict)
+def append_word_count(dict)
+def update_most_recent(dict) 
+def extract_next_links(string, int)
+def is_valid(string)
+
+# below are functions that were sourced
+def dot_product(dict, dict):
+def angle_btwn_vectors(dict, dict):
+def check_similarity(dict, dict):
+def check_most_recent(dict) 
+
+'''
 import re
 from urllib.robotparser import RobotFileParser
 from urllib.parse import urlparse, urldefrag
@@ -110,7 +136,7 @@ def compute_word_count(token_list) -> dict:
                 wc[token] = 1
     return wc
 
-def append_wc(wc) -> None:
+def append_word_count(wc) -> None:
     """Word count wc is appended onto token_map."""
     for word, count in wc.items():
         if word in token_map:
