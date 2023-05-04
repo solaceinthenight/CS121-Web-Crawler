@@ -7,8 +7,6 @@ TODO:
 - Detect and avoid sets of similar pages with no information
 - ensure that you send the server a request with an ASCII URL
 - write simple automatic trap detection systems based on repeated URL patterns and/or (ideally) webpage content similarity repetition over a certain amount of chained pages
-
-- alphabetically order subdomains -- Ethan
 - comment what code does for interview -- Ethan
 
 
@@ -20,6 +18,7 @@ To-be-verified is Done:
 - change tokens to just words 
 - check for low information value and define it (do this by checking if unique word count is greater than n number of words)
     - Instead, used a threshold ratio of .1; calculated by unique words divided by total words
+- alphabetically order subdomains
 
 Done:
 - typo in "reocurring" for "50 most reoccurring..."
