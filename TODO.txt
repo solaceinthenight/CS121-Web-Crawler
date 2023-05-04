@@ -1,5 +1,4 @@
 TODO:
-- ?add http and https to any link, and make sure same link with different scheme is considered one link
 - check for urls that should not be added where the page is accessed in a round about way
 - Detect redirects and if the page redirects your crawler, index the redirected content
 - Detect and avoid dead URLs that return a 200 status but no data (click here to see what the different HTTP status codes meanLinks to an external site.)
@@ -8,6 +7,7 @@ TODO:
 - ensure that you send the server a request with an ASCII URL
 - write simple automatic trap detection systems based on repeated URL patterns and/or (ideally) webpage content similarity repetition over a certain amount of chained pages
 - comment what code does for interview -- Ethan
+- make code cleaner looking
 
 
 extra credit:
