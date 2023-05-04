@@ -99,7 +99,8 @@ def write_results():
         for i in range(0,min(50, len(l))):
             file1.write(str(l[i]) + "\n")
         file1.write("\nSubdomains of ics.uci.edu:\n")
-        for k,v in subdomains.items():
+        for k in sorted(subdomains.keys()):
+            v = subdomains[k]
             file1.write(k + ": " + str(v) + "\n")
 
     # calculate the information value of each page by comparing it's unique words to total words
