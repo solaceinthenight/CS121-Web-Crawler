@@ -72,7 +72,6 @@ def scraper(url, resp):
             file1.write(str(link) + " is " + str(valid) + "\n")
     return link_results
 
-    # return [link for link in links if is_valid(link)]
 
 def extract__scheme_and_domain(url): 
     # return the scheme and domain of the url
@@ -103,11 +102,7 @@ def write_results():
             v = subdomains[k]
             file1.write(k + ": " + str(v) + "\n")
 
-    # calculate the information value of each page by comparing it's unique words to total words
-    if total_words > 0:
-        info_value = len(set(total_words)) / len(total_words) 
-    else:
-        info_value = 0
+ 
     
             
 def tokenize(text):
@@ -220,6 +215,7 @@ def extract_next_links(url, resp):
         if resp.raw_response is None:
             return list()
         # if less than the low information value (25), then the page is not counted
+           
         elif info_value >= LOW_INFO_THRES:
             return list()
 
@@ -247,6 +243,12 @@ def extract_next_links(url, resp):
         if len(words) > total_words:
             total_words = len(words)
             longest_page = final_url
+
+        # calculate the information value of each page by comparing it's unique words to total words
+        if total_words > 0:
+            info_value = len(set(total_words)) / len(total_words) 
+        else:
+            info_value = 0
         
         # update token map without stop words
         compute_word_frequencies(words)
