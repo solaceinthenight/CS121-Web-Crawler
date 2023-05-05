@@ -7,6 +7,7 @@ from urllib.robotparser import RobotFileParser
 from urllib.parse import urlparse, urldefrag
 from bs4 import BeautifulSoup
 from hashlib import blake2b
+import time
 
 GOOD_RESP = range(200,400)
 USER_AGENT = 'my-user-agent'
@@ -18,6 +19,9 @@ bad_url_count = dict()
 banned_domains = set()
 subdomains = dict()
 info_value = 0
+
+going_to_visit = set()
+
 global_site = set()
 robot_dict = dict()
 longest_page = ""
@@ -25,6 +29,7 @@ total_words = 0
 token_map = {}
 fingerprints = set()
 stopwords = ['a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', "aren't", 'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', "can't", 'cannot', 'could', "couldn't", 'did', "didn't", 'do', 'does', "doesn't", 'doing', "don't", 'down', 'during', 'each', 'few', 'for', 'from', 'further', 'had', "hadn't", 'has', "hasn't", 'have', "haven't", 'having', 'he', "he'd", "he'll", "he's", 'her', 'here', "here's", 'hers', 'herself', 'him', 'himself', 'his', 'how', "how's", 'i', "i'd", "i'll", "i'm", "i've", 'if', 'in', 'into', 'is', "isn't", 'it', "it's", 'its', 'itself', "let's", 'me', 'more', 'most', "mustn't", 'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', "shan't", 'she', "she'd", "she'll", "she's", 'should', "shouldn't", 'so', 'some', 'such', 'than', 'that', "that's", 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', "there's", 'these', 'they', "they'd", "they'll", "they're", "they've", 'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was', "wasn't", 'we', "we'd", "we'll", "we're", "we've", 'were', "weren't", 'what', "what's", 'when', "when's", 'where', "where's", 'which', 'while', 'who', "who's", 'whom', 'why', "why's", 'with', "won't", 'would', "wouldn't", 'you', "you'd", "you'll", "you're", "you've", 'your', 'yours', 'yourself', 'yourselves']
+
 
 # checks if a string is ascii
 def url_ascii(url):
@@ -38,6 +43,7 @@ def build_robot(domains):
         rp.set_url('https://www.' + domain + '/robots.txt')
         rp.read()
         robot_dict[domain] = rp
+build_robot(DOMAINS)
 
 # check if we can fetch the url (permission from robots.txt)
 def check_url_for_robots(url):
@@ -97,36 +103,20 @@ def check_similarity(fingerprint): # returns a boolean, True if similiar, False 
 
 
 def scraper(url, resp):
+    start_time = time.time()
     try:
-        build_robot(DOMAINS)
         links = extract_next_links(url, resp)
-
-        bad_domain = ""
-        if(resp.raw_response and resp.raw_response.url):
-            bad_domain = urlparse(resp.raw_response.url).hostname
-        elif url:
-            bad_domain = urlparse(url).hostname
-
-        if not links:
-            counter_list = bad_url_count.get(bad_domain, -1)
-            if counter_list == -1:
-                bad_url_count[bad_domain] = 1
-            else:
-                bad_url_count[bad_domain] += 1
-                if bad_url_count[bad_domain] > 50:
-                    banned_domains.add(bad_domain)
-        elif bad_domain in bad_url_count:
-            bad_url_count[bad_domain] = 0
-
-
-
         link_results = []
         for link in links:
             valid = is_valid(link)
-            if valid:
+            if valid and link not in going_to_visit and link not in global_site:
                 link_results.append(link)
             with open("valid.txt", "a") as file1:
                 file1.write(str(link) + " is " + str(valid) + "\n")
+        end_time = time.time()
+        print("Scraping took " + str(end_time - start_time) + " seconds")
+        for link in link_results:
+            going_to_visit.add(link)
         return link_results
     except Exception as e:
         print("Scraper failed")
@@ -148,6 +138,9 @@ def write_results():
     global global_site
     global token_map
     global subdomains
+
+    print("Writing results to file")
+
     
     with open("result1.txt", "w+") as file1:
         file1.write("Unique page count: " + str(len(global_site)) + "\n\n" )
@@ -213,20 +206,21 @@ def extract_next_links(url, resp):
     global fingerprints
     # Implementation required.
     # url: the URL that was used to get the page
-    # resp.url: the actual url of the page
+    # resp.raw_response.url: the actual url of the page
     # resp.status: the status code returned by the server. 200 is OK, you got the page. Other numbers mean that there was some kind of problem.
     # resp.error: when status is not 200, you can check the error here, if needed.
-    # resp.raw_response: this is where the page actually is. More specifically, the raw_response has two parts:
+    # resp: this is where the page actually is. More specifically, the raw_response has two parts:
     #         resp.raw_response.url: the url, again
-    #         resp.raw_response.content: the content of the page!
-    # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
+    #         resp.content: the content of the page!
+    # Return a list with the hyperlinks (as strings) scrapped from resp.content
     # append "/robots.txt"
     # print("url: ", url) 
     try:
         # change to actual url
 
         # checks if the raw response has actual content (pages with no content are low information value)
-        if resp.raw_response is None:
+        if resp is None:
+            print("resp is None")
             return list()
 
         # change to actual url
@@ -235,12 +229,14 @@ def extract_next_links(url, resp):
 
         # checks if the starting frontier url is valid
         if is_valid(url) == False:
+            print("url is not valid at frontier")
             return list()
 
 
 
         # checks to ensure a 200 status
         if resp.status < GOOD_RESP[0] or resp.status > GOOD_RESP[-1]:
+            print("resp status is not 200")
             return list()
 
         # add url after it passes all checks, but remove fragment
@@ -250,14 +246,15 @@ def extract_next_links(url, resp):
 
 
         # get raw text from the html
-        string_document = BeautifulSoup(resp.raw_response.content, "html.parser") #html.fromstring(resp.raw_response.content)
+        string_document = BeautifulSoup(resp.raw_response.content, "html.parser") #html.fromstring(resp.content)
 
-        
+       
         raw_text = string_document.get_text() #string_document.text_content()
         
         # if word count too low or high, disregard file, used link below to determine minimum, and maximum is 100x that
         # https://whiteboard-mktg.com/blog/how-much-content-is-good-for-seo-rankings/#:~:text=Forbes%20indicates%20that%20an%20average,rank%20as%20highly%20in%20search.
         if(not (300 < len(raw_text.split()) < 30000)):
+            print("Word count too low or high")
             return list()
         
         global_site.add(final_url)
@@ -280,9 +277,11 @@ def extract_next_links(url, resp):
 
         # Check if duplicate/near-duplicate
         fingerprint = gen_fingerprint(wc)
-        fingerprints.add(fingerprint)
+        
         if check_similarity(fingerprint):
+            print("Duplicate/near-duplicate detected")
             return list()
+        fingerprints.add(fingerprint)
 
         
         parsed_domain =  urlparse(final_url)
@@ -306,6 +305,7 @@ def extract_next_links(url, resp):
 
         # retrieve the links from the text and return it
         links =  string_document.find_all("a") #list(string_document.iterlinks())
+ 
         final_list = list()
         for link in links:
             link = link.get("href") #link = link[2]
@@ -321,7 +321,7 @@ def extract_next_links(url, resp):
                 if new_url[-1] != "/":
                     new_url += "/"
                 link = new_url + link
-
+            
             final_list.append(link)
         return final_list
     except Exception as e:
@@ -342,21 +342,27 @@ def is_valid(url):
 
         # remove the fragment
         url = urldefrag(url)[0]
+       
 
         # parse string into scheme, domain, path, query, and fragment
         parsed = urlparse(url)
 
         # return fals eif not in http or https
         if parsed.scheme not in set(["http", "https"]) or not parsed.hostname:
+            print("scheme not in http or https")
             return False
 
         if parsed.hostname in banned_domains:
+            print("hostname in banned domains")
             return False
         
         if url_ascii(url) == False:
+            print("url is not ascii")
             return False
+        
 
         if not check_url_for_robots:
+            print("url is not robots.txt")
             return False
         
         # return false if there is a non text file
@@ -369,19 +375,23 @@ def is_valid(url):
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower()):
+            print("url is not a text file")
             return False
         
         # check if the url is a valid domain
         if not re.match(r"(.+\.)?ics\.uci\.edu|(.+\.)?cs\.uci\.edu|(.+\.)?informatics\.uci\.edu|(.+\.)?stat\.uci\.edu", parsed.hostname.lower()):
+            print("url is not a valid domain")
             return False
         
         # checks if the url has a repeating directory in the path to prevent traps
         # does not cover pages that may have been revisted before the second occurence of the directory in question
         if re.match(r"^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$", parsed.path.lower()):
+            print("url has a repeating directory")
             return False
 
         # checks if the url is already in the global set to prevent traps
         if url in global_site:
+            print("url is already in global set")
             return False
         
         # return true if nothing fails in the if checks
