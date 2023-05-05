@@ -71,7 +71,7 @@ def scraper(url, resp):
     build_robot(DOMAINS)
     links = extract_next_links(url, resp)
 
-    bad_domain = urlparse(resp.url).hostname
+    bad_domain = urlparse(resp.raw_response.url).hostname
     if not links:
         counter_list = bad_url_count.get(bad_domain, -1)
         if counter_list == -1:
@@ -236,7 +236,7 @@ def extract_next_links(url, resp):
     # print("url: ", url) 
     try:
         # change to actual url
-        url = resp.url
+        url = resp.raw_response.url
 
         # checks if the starting frontier url is valid
         if is_valid(url) == False:
@@ -250,7 +250,7 @@ def extract_next_links(url, resp):
         #     return list()
 
         # checks to ensure a 200 status
-        if resp.status_code < GOOD_RESP[0] or resp.status_code > GOOD_RESP[-1]:
+        if resp.status < GOOD_RESP[0] or resp.status > GOOD_RESP[-1]:
             return list()
 
         # checks to ensure page is in html 
@@ -259,7 +259,7 @@ def extract_next_links(url, resp):
         #     return list()
 
         # add url after it passes all checks, but remove fragment
-        final_url = urldefrag(resp.url)[0]
+        final_url = urldefrag(resp.raw_response.url)[0]
         #final_url = normalize(final_url) # NameError: name 'normalize' is not defined
         
 
