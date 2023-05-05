@@ -27,7 +27,7 @@ def check_most_recent(dict)
 import re
 from urllib.robotparser import RobotFileParser
 from urllib.parse import urlparse, urldefrag
-from lxml import html
+#from lxml import html
 from bs4 import BeautifulSoup
 from math import sqrt, acos # for document similarity
 # from bs4 from importBeautifulSoup as Bst
