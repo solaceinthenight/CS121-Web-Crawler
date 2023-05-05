@@ -1,36 +1,13 @@
 '''
 This module contains the webscraper which extracts and stores necessary page information 
 to go about crawling in a polite way with respect to site policies (robots.txt)
-
-# The implemented functions are:
-
-def build_robot(array of string)
-def check_url_for_robots(string)
-def scraper(string, int)
-def extract_scheme_and_domain(string)
-def write_results(string)
-def tokenize()
-def compute_word_frequencies(list)
-def compute_word_count(dict)
-def append_word_count(dict)
-def update_most_recent(dict) 
-def extract_next_links(string, int)
-def is_valid(string)
-
-# below are functions that were sourced
-def dot_product(dict, dict):
-def angle_btwn_vectors(dict, dict):
-def check_similarity(dict, dict):
-def check_most_recent(dict) 
-
 '''
 import re
 from urllib.robotparser import RobotFileParser
 from urllib.parse import urlparse, urldefrag
-#from lxml import html
 from bs4 import BeautifulSoup
-from math import sqrt, acos # for document similarity
-# from bs4 from importBeautifulSoup as Bst
+from hashlib import blake2b
+
 GOOD_RESP = range(200,400)
 USER_AGENT = 'my-user-agent'
 DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
@@ -46,7 +23,7 @@ robot_dict = dict()
 longest_page = ""
 total_words = 0
 token_map = {}
-most_recent = list() # Five most recent 
+fingerprints = set()
 stopwords = ['a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', "aren't", 'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', "can't", 'cannot', 'could', "couldn't", 'did', "didn't", 'do', 'does', "doesn't", 'doing', "don't", 'down', 'during', 'each', 'few', 'for', 'from', 'further', 'had', "hadn't", 'has', "hasn't", 'have', "haven't", 'having', 'he', "he'd", "he'll", "he's", 'her', 'here', "here's", 'hers', 'herself', 'him', 'himself', 'his', 'how', "how's", 'i', "i'd", "i'll", "i'm", "i've", 'if', 'in', 'into', 'is', "isn't", 'it', "it's", 'its', 'itself', "let's", 'me', 'more', 'most', "mustn't", 'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', "shan't", 'she', "she'd", "she'll", "she's", 'should', "shouldn't", 'so', 'some', 'such', 'than', 'that', "that's", 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', "there's", 'these', 'they', "they'd", "they'll", "they're", "they've", 'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was', "wasn't", 'we', "we'd", "we'll", "we're", "we've", 'were', "weren't", 'what', "what's", 'when', "when's", 'where', "where's", 'which', 'while', 'who', "who's", 'whom', 'why', "why's", 'with', "won't", 'would', "wouldn't", 'you', "you'd", "you'll", "you're", "you've", 'your', 'yours', 'yourself', 'yourselves']
 
 # checks if a string is ascii
@@ -55,6 +32,7 @@ def url_ascii(url):
 
 # build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
 def build_robot(domains):
+    global robot_dict
     for domain in domains:
         rp = RobotFileParser()
         rp.set_url('https://www.' + domain + '/robots.txt')
@@ -63,8 +41,59 @@ def build_robot(domains):
 
 # check if we can fetch the url (permission from robots.txt)
 def check_url_for_robots(url):
+    global robot_dict
     parts = urlparse(url)
     return robot_dict[parts.hostname].can_fetch("*", url)
+
+def gen_hash(token):
+    NUM_BITS = 128
+    digest_size = (NUM_BITS + 7) // 8
+
+    token_b = token.encode('utf-8')
+    hash_obj = blake2b(token_b, digest_size=digest_size)
+    return int(hash_obj.hexdigest(), 16) # return the hash as an int
+
+def gen_fingerprint(tokens_dict):
+    NUM_BITS = 128 # number of bits generated for each hash
+    WORDS = 500 # limit of unique tokens to take in
+    
+    hash_list = list() # list of tuples (hash, multiplier)
+    vector_v = list() # to be formed by summing weights
+    counter = 0
+    total_count = sum(tokens_dict.values())
+    for token, count in tokens_dict.items():
+        hash_list.append((gen_hash(token), count)) # dividing to normalize counts
+        counter += 1
+        if counter == WORDS:
+            break
+    
+    mask = 1
+    for i in range(NUM_BITS):
+        weight = 0
+        for hash_, multiplier in hash_list:
+            masked_bit = hash_ & mask
+            if masked_bit == 0:
+                multiplier *= -1
+            weight += multiplier
+        mask <<= 1 # shift mask to the left by 1
+        vector_v.append(weight)
+    ret = ""
+    for bit in vector_v:
+        ret += "1" if bit > 0 else "0"
+    return int(ret, 2)
+
+def check_similarity(fingerprint): # returns a boolean, True if similiar, False if not similar
+    global fingerprints
+    NUM_BITS = 128
+    SIMILARITY_THRESHOLD = 0.90
+    
+    if fingerprint in fingerprints: # Exact Match
+        return True
+    for fp in fingerprints: # Near-Duplication
+        similarity = 1 - (bin(fingerprint ^ fp)[2:].count('1') / NUM_BITS)
+        if similarity >= SIMILARITY_THRESHOLD:
+            return True
+    return False
 
 
 def scraper(url, resp):
@@ -133,13 +162,6 @@ def write_results():
             v = subdomains[k]
             file1.write(k + ": " + str(v) + "\n")
 
- 
-    
-            
-
-
-
-
 def tokenize(text):
     # declares list to return and compiles an re expression to match
     comp = re.compile(r"[a-zA-Z'’-]+")
@@ -175,64 +197,20 @@ def compute_word_count(token_list) -> dict:
 
 def append_word_count(wc) -> None:
     """Word count wc is appended onto token_map."""
+    global token_map
+
     for word, count in wc.items():
         if word in token_map:
             token_map[word] += count
         else:
             token_map[word] = count
 
-def update_most_recent(wc) -> None:
-    """Given the current word count, add it to most_recent (list), keeping len(most_recent) <= 5."""
-    most_recent.append(wc)
-    if len(most_recent) > 5:
-        del most_recent[0]
-
-
-# START OF WEBPAGE SIMILARITY CHECK
-# Modified from https://www.geeksforgeeks.org/measuring-the-document-similarity-in-python/
-def dot_product(wc1, wc2):
-    """Compute the dot product of two dictionary vectors."""
-    dp = 0.0
-    for key in wc1:
-        if key in wc2:
-            dp += wc1[key] * wc2[key]
-    return dp
-
-def angle_btwn_vectors(wc1, wc2):
-    """Compute the angle between two dictionary vectors."""
-    numerator = dot_product(wc1, wc2)
-    denominator = sqrt(dot_product(wc1, wc1) * dot_product(wc2, wc2))
-    return acos(numerator / denominator)
-
-def check_similarity(wc1, wc2): # Threshold for similar document: 90%
-    """Check the similarity between two word count dictionaries.
-
-    Args:
-        wc1 (dict): A dictionary of {token:count} pairs denoting word count.
-        wc2 (dict): A dictionary of {token:count} pairs denoting word count.    
-
-    Return:
-        boolean: true if document similarity is greater than or equal to similarity threshold; false otherwise.
-    """
-
-    similarity_threshold = 0.90
-    return (angle_btwn_vectors(wc1, wc2) >= similarity_threshold)
-
-def check_most_recent(wc) -> bool:
-    """Check the similarity of the word count with the most_recent (list)."""
-    for recent in most_recent:
-        if check_similarity(recent, wc):
-            return True # Similar
-    return False # Not similar
-# END OF WEBPAGE SIMILARITY CHECK
-
 
 def extract_next_links(url, resp):
     global subdomains
     global longest_page
     global total_words
-
-
+    global fingerprints
     # Implementation required.
     # url: the URL that was used to get the page
     # resp.url: the actual url of the page
@@ -246,27 +224,24 @@ def extract_next_links(url, resp):
     # print("url: ", url) 
     try:
         # change to actual url
-        url = resp.raw_response.url
+
+        # checks if the raw response has actual content (pages with no content are low information value)
+        if resp.raw_response is None:
+            return list()
+
+        # change to actual url
+        if resp.raw_response.url:
+            url = resp.raw_response.url
 
         # checks if the starting frontier url is valid
         if is_valid(url) == False:
             return list()
 
-        # checks if the raw response has actual content (pages with no content are low information value)
-        if resp.raw_response is None:
-            return list()
-        # if less than the low information value (25), then the page is not counted
-        # elif info_value >= LOW_INFO_THRES:
-        #     return list()
+
 
         # checks to ensure a 200 status
         if resp.status < GOOD_RESP[0] or resp.status > GOOD_RESP[-1]:
             return list()
-
-        # checks to ensure page is in html 
-        # TODO: AttributeError: 'CaseInsensitiveDict' object has no attribute 'get_content_type'
-        # if resp.raw_response.headers.get_content_type() != "text/html":
-        #     return list()
 
         # add url after it passes all checks, but remove fragment
         final_url = urldefrag(resp.raw_response.url)[0]
@@ -300,10 +275,15 @@ def extract_next_links(url, resp):
         #     info_value = 0
         
         # update token map without stop words
-        compute_word_frequencies(words)
+        wc = compute_word_count(words)
+        append_word_count(wc)
 
-        # compute a word count dictionary
-        # wc = compute_word_count(words) # NEED LOGIC CHECKINGs
+        # Check if duplicate/near-duplicate
+        fingerprint = gen_fingerprint(wc)
+        fingerprints.add(fingerprint)
+        if check_similarity(fingerprint):
+            return list()
+
         
         parsed_domain =  urlparse(final_url)
         sub_hostname = parsed_domain.hostname
@@ -374,6 +354,9 @@ def is_valid(url):
             return False
         
         if url_ascii(url) == False:
+            return False
+
+        if not check_url_for_robots:
             return False
         
         # return false if there is a non text file
