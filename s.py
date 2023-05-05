@@ -132,7 +132,7 @@ def write_results():
             
 def tokenize(text):
     # declares list to return and compiles an re expression to match
-    comp = re.compile(r"[a-zA-Z0-9'’-]+")
+    comp = re.compile(r"[a-zA-Z'’-]+")
     tokens = re.findall(comp, text)
     tokens = [t.lower() for t in tokens if len(t) > 1]
     return tokens
@@ -163,9 +163,7 @@ def compute_word_count(token_list) -> dict:
                 wc[token] = 1
     return wc
 
-def append_word_count(wc) -> None:
-
-    
+def append_word_count(wc) -> None: 
     """Word count wc is appended onto token_map."""
     for word, count in wc.items():
         if word in token_map:
@@ -286,6 +284,11 @@ def extract_next_links(url, resp):
             total_words = len(words)
             longest_page = final_url
         
+       
+       
+       
+       
+       
         # update token map without stop words
         compute_word_frequencies(words)
 
@@ -358,7 +361,6 @@ def is_valid(url):
             return False
         
         if parsed.hostname in banned_domains:
-            print("BANNED")
             return False
 
         if url_ascii(url) == False:
@@ -384,6 +386,7 @@ def is_valid(url):
         # does not cover pages that may have been revisted before the second occurence of the directory in question
         if re.match(r"^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$", parsed.path.lower()):
             return False
+        
         # checks if the url is already in the global set to prevent traps
         if url in global_site:
             return False
@@ -394,4 +397,4 @@ def is_valid(url):
 
     except TypeError:
         print ("TypeError for ", parsed)
-        raise
+        return False
