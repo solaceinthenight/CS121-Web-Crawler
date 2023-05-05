@@ -31,11 +31,13 @@ from urllib.parse import urlparse, urldefrag
 from bs4 import BeautifulSoup
 from math import sqrt, acos # for document similarity
 # from bs4 from importBeautifulSoup as Bst
-GOOD_RESP = 200
+GOOD_RESP = range(200,400)
 USER_AGENT = 'my-user-agent'
 DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
 LOW_INFO_THRES = 0.1
 
+bad_url_count = dict()
+banned_domains = set()
 subdomains = dict()
 info_value = 0
 global_site = set()
@@ -68,6 +70,20 @@ def check_url_for_robots(url):
 def scraper(url, resp):
     build_robot(DOMAINS)
     links = extract_next_links(url, resp)
+
+    bad_domain = urlparse(resp.url).hostname
+    if not links:
+        counter_list = bad_url_count.get(bad_domain, -1)
+        if counter_list == -1:
+            bad_url_count[bad_domain] = 1
+        else:
+            bad_url_count[bad_domain] += 1
+            if bad_url_count[bad_domain] > 50:
+                banned_domains.add(bad_domain)
+    elif bad_domain in bad_url_count:
+        bad_url_count[bad_domain] = 0
+
+
 
     link_results = []
     for link in links:
@@ -220,9 +236,10 @@ def extract_next_links(url, resp):
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     # append "/robots.txt"
     # print("url: ", url) 
-
-    print(url, resp.url)
     try:
+        # change to actual url
+        url = resp.url
+
         # checks if the starting frontier url is valid
         if is_valid(url) == False:
             return list()
@@ -235,9 +252,9 @@ def extract_next_links(url, resp):
         #     return list()
 
         # checks to ensure a 200 status
-        if resp.status_code != GOOD_RESP:
+        if resp.status_code < GOOD_RESP[0] or resp.status_code > GOOD_RESP[-1]:
             return list()
-
+        
         # checks to ensure page is in html 
         # TODO: AttributeError: 'CaseInsensitiveDict' object has no attribute 'get_content_type'
         # if resp.raw_response.headers.get_content_type() != "text/html":
@@ -246,14 +263,24 @@ def extract_next_links(url, resp):
         # add url after it passes all checks, but remove fragment
         final_url = urldefrag(resp.url)[0]
         #final_url = normalize(final_url) # NameError: name 'normalize' is not defined
-        global_site.add(final_url)
+        
 
 
         # get raw text from the html
         string_document = BeautifulSoup(resp.content, "html.parser") #html.fromstring(resp.raw_response.content)
 
-        # get word count by using tokenizer
+        
         raw_text = string_document.get_text() #string_document.text_content()
+
+        # if word count too low or high, disregard file, used link below to determine minimum, and maximum is 100x that
+        # https://whiteboard-mktg.com/blog/how-much-content-is-good-for-seo-rankings/#:~:text=Forbes%20indicates%20that%20an%20average,rank%20as%20highly%20in%20search.
+        if(not (300 < len(raw_text.split()) < 30000)):
+            return list()
+
+        global_site.add(final_url)
+
+
+        # get word count by using tokenizer
         words = tokenize(raw_text)
         if len(words) > total_words:
             total_words = len(words)
@@ -291,7 +318,6 @@ def extract_next_links(url, resp):
             link = link.get("href") #link = link[2]
             link = urldefrag(link)[0]
             link = str(link)
-            print(link)
             if link.startswith("/") and not link.startswith("//"):
                 scheme_and_domain = extract__scheme_and_domain(url)
                 link = scheme_and_domain + link
@@ -302,7 +328,6 @@ def extract_next_links(url, resp):
                 if new_url[-1] != "/":
                     new_url += "/"
                 link = new_url + link
-            print(link)
         
             final_list.append(link)
         return final_list
@@ -329,9 +354,13 @@ def is_valid(url):
         parsed = urlparse(url)
 
         # return fals eif not in http or https
-        if parsed.scheme not in set(["http", "https"]):
+        if parsed.scheme not in set(["http", "https"]) or not parsed.hostname:
             return False
         
+        if parsed.hostname in banned_domains:
+            print("BANNED")
+            return False
+
         if url_ascii(url) == False:
             return False
 
