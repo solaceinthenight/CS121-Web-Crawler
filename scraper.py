@@ -31,12 +31,16 @@ from urllib.parse import urlparse, urldefrag
 from bs4 import BeautifulSoup
 from math import sqrt, acos # for document similarity
 # from bs4 from importBeautifulSoup as Bst
-GOOD_RESP = 200
+GOOD_RESP = range(200,400)
 USER_AGENT = 'my-user-agent'
 DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
 LOW_INFO_THRES = 0.1
 
+
+bad_url_count = dict()
+banned_domains = set()
 subdomains = dict()
+info_value = 0
 global_site = set()
 robot_dict = dict()
 longest_page = ""
@@ -44,6 +48,10 @@ total_words = 0
 token_map = {}
 most_recent = list() # Five most recent 
 stopwords = ['a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', "aren't", 'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', "can't", 'cannot', 'could', "couldn't", 'did', "didn't", 'do', 'does', "doesn't", 'doing', "don't", 'down', 'during', 'each', 'few', 'for', 'from', 'further', 'had', "hadn't", 'has', "hasn't", 'have', "haven't", 'having', 'he', "he'd", "he'll", "he's", 'her', 'here', "here's", 'hers', 'herself', 'him', 'himself', 'his', 'how', "how's", 'i', "i'd", "i'll", "i'm", "i've", 'if', 'in', 'into', 'is', "isn't", 'it', "it's", 'its', 'itself', "let's", 'me', 'more', 'most', "mustn't", 'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', "shan't", 'she', "she'd", "she'll", "she's", 'should', "shouldn't", 'so', 'some', 'such', 'than', 'that', "that's", 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', "there's", 'these', 'they', "they'd", "they'll", "they're", "they've", 'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was', "wasn't", 'we', "we'd", "we'll", "we're", "we've", 'were', "weren't", 'what', "what's", 'when', "when's", 'where', "where's", 'which', 'while', 'who', "who's", 'whom', 'why', "why's", 'with', "won't", 'would', "wouldn't", 'you', "you'd", "you'll", "you're", "you've", 'your', 'yours', 'yourself', 'yourselves']
+
+# checks if a string is ascii
+def url_ascii(url):
+    return all(ord(c) < 128 for c in url)
 
 # build a dictionary of {domain:RobotFileParser} -- use to check if urlpath is valid
 def build_robot(domains):
@@ -63,6 +71,20 @@ def scraper(url, resp):
     build_robot(DOMAINS)
     links = extract_next_links(url, resp)
 
+    bad_domain = urlparse(resp.url).hostname
+    if not links:
+        counter_list = bad_url_count.get(bad_domain, -1)
+        if counter_list == -1:
+            bad_url_count[bad_domain] = 1
+        else:
+            bad_url_count[bad_domain] += 1
+            if bad_url_count[bad_domain] > 50:
+                banned_domains.add(bad_domain)
+    elif bad_domain in bad_url_count:
+        bad_url_count[bad_domain] = 0
+
+
+
     link_results = []
     for link in links:
         valid = is_valid(link)
@@ -71,6 +93,7 @@ def scraper(url, resp):
         with open("valid.txt", "a") as file1:
             file1.write(str(link) + " is " + str(valid) + "\n")
     return link_results
+
 
 
 def extract__scheme_and_domain(url): 
@@ -86,8 +109,6 @@ def write_results():
     global global_site
     global token_map
     global subdomains
-    global most_recent
-    global info_value
     
     with open("result1.txt", "w+") as file1:
         file1.write("Unique page count: " + str(len(global_site)) + "\n\n" )
@@ -105,9 +126,13 @@ def write_results():
  
     
             
+
+
+
+
 def tokenize(text):
     # declares list to return and compiles an re expression to match
-    comp = re.compile(r"[a-zA-Z]+")
+    comp = re.compile(r"[a-zA-Z'’-]+")
     tokens = re.findall(comp, text)
     tokens = [t.lower() for t in tokens if len(t) > 1]
     return tokens
@@ -115,6 +140,10 @@ def tokenize(text):
 def compute_word_frequencies(token_list): # Makes use of the global token_map
     # the for loop adds a token to the dict if it does not already exist as a key, and then increments an existing
     # token key if it shows up again
+    global token_map
+    global stopwords
+    
+    
     for token in token_list:
         if token not in stopwords:
             if token_map.get(token):
@@ -123,6 +152,8 @@ def compute_word_frequencies(token_list): # Makes use of the global token_map
                 token_map[token] = 1
 
 def compute_word_count(token_list) -> dict:
+    global stopwords
+
     wc = dict()
     for token in token_list:
         if token not in stopwords:
@@ -187,6 +218,11 @@ def check_most_recent(wc) -> bool:
 
 
 def extract_next_links(url, resp):
+    global subdomains
+    global longest_page
+    global total_words
+
+
     # Implementation required.
     # url: the URL that was used to get the page
     # resp.url: the actual url of the page
@@ -198,15 +234,10 @@ def extract_next_links(url, resp):
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     # append "/robots.txt"
     # print("url: ", url) 
-    global total_words
-    global longest_page
-    global global_site
-    global token_map
-    global subdomains
-    global most_recent
-    
-
     try:
+        # change to actual url
+        url = resp.url
+
         # checks if the starting frontier url is valid
         if is_valid(url) == False:
             return list()
@@ -215,12 +246,11 @@ def extract_next_links(url, resp):
         if resp.raw_response is None:
             return list()
         # if less than the low information value (25), then the page is not counted
-           
-        elif info_value >= LOW_INFO_THRES:
-            return list()
+        # elif info_value >= LOW_INFO_THRES:
+        #     return list()
 
         # checks to ensure a 200 status
-        if resp.status != GOOD_RESP:
+        if resp.status_code < GOOD_RESP[0] or resp.status_code > GOOD_RESP[-1]:
             return list()
 
         # checks to ensure page is in html 
@@ -231,24 +261,33 @@ def extract_next_links(url, resp):
         # add url after it passes all checks, but remove fragment
         final_url = urldefrag(resp.url)[0]
         #final_url = normalize(final_url) # NameError: name 'normalize' is not defined
-        global_site.add(final_url)
+        
 
 
         # get raw text from the html
         string_document = BeautifulSoup(resp.raw_response.content, "html.parser") #html.fromstring(resp.raw_response.content)
 
-        # get word count by using tokenizer
+        
         raw_text = string_document.get_text() #string_document.text_content()
+        
+        # if word count too low or high, disregard file, used link below to determine minimum, and maximum is 100x that
+        # https://whiteboard-mktg.com/blog/how-much-content-is-good-for-seo-rankings/#:~:text=Forbes%20indicates%20that%20an%20average,rank%20as%20highly%20in%20search.
+        if(not (300 < len(raw_text.split()) < 30000)):
+            return list()
+        
+        global_site.add(final_url)
+        
+        # get word count by using tokenizer
         words = tokenize(raw_text)
         if len(words) > total_words:
             total_words = len(words)
             longest_page = final_url
 
         # calculate the information value of each page by comparing it's unique words to total words
-        if total_words > 0:
-            info_value = len(set(total_words)) / len(total_words) 
-        else:
-            info_value = 0
+        # if total_words > 0:
+        #     info_value = len(set(total_words)) / len(total_words) 
+        # else:
+        #     info_value = 0
         
         # update token map without stop words
         compute_word_frequencies(words)
@@ -281,9 +320,18 @@ def extract_next_links(url, resp):
         for link in links:
             link = link.get("href") #link = link[2]
             link = urldefrag(link)[0]
-            if link.startswith("/") and not link.startswith("//") and not link.startswith(".."):
+            link = str(link)
+            if link.startswith("/") and not link.startswith("//"):
                 scheme_and_domain = extract__scheme_and_domain(url)
                 link = scheme_and_domain + link
+            elif link.startswith("//"):
+                link = sub_scheme + ":" + link
+            elif link.startswith(".."):
+                new_url = sub_scheme + "://" + parsed_domain.hostname + parsed_domain.path
+                if new_url[-1] != "/":
+                    new_url += "/"
+                link = new_url + link
+
             final_list.append(link)
         return final_list
     except Exception as e:
@@ -294,6 +342,8 @@ def extract_next_links(url, resp):
 
 
 def is_valid(url):
+    global global_site
+    
     # Decide whether to crawl this url or not. 
     # If you decide to crawl it, return True; otherwise return False.
     # There are already some conditions that return False.
@@ -307,9 +357,15 @@ def is_valid(url):
         parsed = urlparse(url)
 
         # return fals eif not in http or https
-        if parsed.scheme not in set(["http", "https"]):
+        if parsed.scheme not in set(["http", "https"]) or not parsed.hostname:
             return False
 
+        if parsed.hostname in banned_domains:
+            return False
+        
+        if url_ascii(url) == False:
+            return False
+        
         # return false if there is a non text file
         if re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
@@ -341,4 +397,4 @@ def is_valid(url):
 
     except TypeError:
         print ("TypeError for ", parsed)
-        raise
+        return False
