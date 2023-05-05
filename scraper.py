@@ -68,31 +68,41 @@ def check_url_for_robots(url):
 
 
 def scraper(url, resp):
-    build_robot(DOMAINS)
-    links = extract_next_links(url, resp)
+    try:
+        build_robot(DOMAINS)
+        links = extract_next_links(url, resp)
 
-    bad_domain = urlparse(resp.raw_response.url).hostname
-    if not links:
-        counter_list = bad_url_count.get(bad_domain, -1)
-        if counter_list == -1:
-            bad_url_count[bad_domain] = 1
-        else:
-            bad_url_count[bad_domain] += 1
-            if bad_url_count[bad_domain] > 50:
-                banned_domains.add(bad_domain)
-    elif bad_domain in bad_url_count:
-        bad_url_count[bad_domain] = 0
+        bad_domain = ""
+        if(resp.raw_response and resp.raw_response.url):
+            bad_domain = urlparse(resp.raw_response.url).hostname
+        elif url:
+            bad_domain = urlparse(url).hostname
+
+        if not links:
+            counter_list = bad_url_count.get(bad_domain, -1)
+            if counter_list == -1:
+                bad_url_count[bad_domain] = 1
+            else:
+                bad_url_count[bad_domain] += 1
+                if bad_url_count[bad_domain] > 50:
+                    banned_domains.add(bad_domain)
+        elif bad_domain in bad_url_count:
+            bad_url_count[bad_domain] = 0
 
 
 
-    link_results = []
-    for link in links:
-        valid = is_valid(link)
-        if valid:
-            link_results.append(link)
-        with open("valid.txt", "a") as file1:
-            file1.write(str(link) + " is " + str(valid) + "\n")
-    return link_results
+        link_results = []
+        for link in links:
+            valid = is_valid(link)
+            if valid:
+                link_results.append(link)
+            with open("valid.txt", "a") as file1:
+                file1.write(str(link) + " is " + str(valid) + "\n")
+        return link_results
+    except Exception as e:
+        print("Scraper failed")
+        return list()
+
 
 
 
