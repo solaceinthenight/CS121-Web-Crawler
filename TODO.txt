@@ -3,7 +3,8 @@ TODO:
 - Detect and avoid dead URLs that return a 200 status but no data (click here to see what the different HTTP status codes meanLinks to an external site.)
 - Detect and avoid crawling very large files, especially if they have low information value
 - Detect and avoid sets of similar pages with no information
-- ensure that you send the server a request with an ASCII URL
+- CHANGE S.PY TO USE RAW_RESPONSE
+
 - comment what code does for interview -- Ethan
 - make code cleaner looking
 - robots and sitemap
@@ -33,3 +34,4 @@ Done:
 - check re expression for tokenizer
 - status issue with 604
 - check for stop words
+- ensure that you send the server a request with an ASCII URL

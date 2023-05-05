@@ -221,6 +221,7 @@ def extract_next_links(url, resp):
     # append "/robots.txt"
     # print("url: ", url) 
 
+    print(url, resp.url)
     try:
         # checks if the starting frontier url is valid
         if is_valid(url) == False:
@@ -290,9 +291,18 @@ def extract_next_links(url, resp):
             link = link.get("href") #link = link[2]
             link = urldefrag(link)[0]
             link = str(link)
-            if link.startswith("/") and not link.startswith("//") and not link.startswith("..") or not link.startswith("http"):
+            print(link)
+            if link.startswith("/") and not link.startswith("//"):
                 scheme_and_domain = extract__scheme_and_domain(url)
                 link = scheme_and_domain + link
+            elif link.startswith("//"):
+                link = sub_scheme + ":" + link
+            elif link.startswith(".."):
+                new_url = sub_scheme + "://" + parsed_domain.hostname + parsed_domain.path
+                if new_url[-1] != "/":
+                    new_url += "/"
+                link = new_url + link
+            print(link)
         
             final_list.append(link)
         return final_list
