@@ -1,10 +1,17 @@
 from threading import Thread
-
+from threading import Lock
+import urllib
 from inspect import getsource
 from utils.download import download
 from utils import get_logger
 import scraper
 import time
+
+# an array of locks for each domain 
+DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
+lock_dictionary = {}
+for domain in DOMAINS:
+    lock_dictionary[domain] = Lock()
 
 
 class Worker(Thread):
@@ -23,7 +30,15 @@ class Worker(Thread):
             if not tbd_url:
                 self.logger.info("Frontier is empty. Stopping Crawler.")
                 break
+            # parse the hostname from the domain name
+            hostname = urllib.parse.urlparse(tbd_url).hostname
+            # acquire the lock for the domain
+
+            lock_dictionary[hostname].acquire()
+            # download the url
             resp = download(tbd_url, self.config, self.logger)
+            # release the lock for the domain
+            lock_dictionary[hostname].release()
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
@@ -32,3 +47,4 @@ class Worker(Thread):
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
+
