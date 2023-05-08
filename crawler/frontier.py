@@ -1,6 +1,6 @@
 import os
 import shelve
-
+import urllib
 from threading import Thread, RLock
 from queue import Queue, Empty
 
@@ -11,7 +11,13 @@ class Frontier(object):
     def __init__(self, config, restart):
         self.logger = get_logger("FRONTIER")
         self.config = config
-        self.to_be_downloaded = list()
+
+        # Make to_be_downloaded a dictionary of queues, where the key is the hostname
+        self.to_be_downloaded = dict()
+
+        # Make a counter to keep track of which hostname to get from the dictionary
+        self.current_hostname_key_counter = 0
+
         
         if not os.path.exists(self.config.save_file) and not restart:
             # Save file does not exist, but request to load save.
@@ -34,14 +40,21 @@ class Frontier(object):
             if not self.save:
                 for url in self.config.seed_urls:
                     self.add_url(url)
+    
+    def add_to_to_be_downloaded(self, url):
+        hostname = urllib.parse.urlparse(url).hostname
+        if hostname not in self.to_be_downloaded.keys():
+            self.to_be_downloaded[hostname] = Queue()
+        self.to_be_downloaded[hostname].put(url)
+
 
     def _parse_save_file(self):
         ''' This function can be overridden for alternate saving techniques. '''
         total_count = len(self.save)
         tbd_count = 0
         for url, completed in self.save.values():
-            if not completed and is_valid(url):
-                self.to_be_downloaded.append(url)
+            if not completed and is_valid(url):                
+                self.add_to_to_be_downloaded(url)
                 tbd_count += 1
         self.logger.info(
             f"Found {tbd_count} urls to be downloaded from {total_count} "
@@ -49,7 +62,26 @@ class Frontier(object):
 
     def get_tbd_url(self):
         try:
-            return self.to_be_downloaded.pop()
+            # Get the index from the dictionary using the counter ran as a modulo of the length of the dictionary
+            index = self.current_hostname_key_counter % len(self.to_be_downloaded.keys())
+
+            # Get the hostname from the dictionary using the counter as the index
+            hostname = list(self.to_be_downloaded.keys())[index]
+            
+            # Initialize the value to None
+            value = None
+            try: 
+                # Try to get the value from the queue
+                value = self.to_be_downloaded[hostname].get_nowait()
+            except Empty:
+                # If the queue is empty, delete the queue and return None
+                del self.to_be_downloaded[hostname]
+                # Return another call to get_tbd_url
+                return self.get_tbd_url()
+            
+            current_hostname_key_counter += 1
+            
+            return value
         except IndexError:
             return None
 
