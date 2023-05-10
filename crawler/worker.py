@@ -11,7 +11,7 @@ import time
 DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
 lock_dictionary = {}
 for domain in DOMAINS:
-    lock_dictionary[domain] = Lock()
+    lock_dictionary["www." + domain] = Lock()
 
 
 class Worker(Thread):
@@ -34,11 +34,11 @@ class Worker(Thread):
             hostname = urllib.parse.urlparse(tbd_url).hostname
             # acquire the lock for the domain
 
-            lock_dictionary[hostname].acquire()
+ 
             # download the url
             resp = download(tbd_url, self.config, self.logger)
             # release the lock for the domain
-            lock_dictionary[hostname].release()
+ 
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
