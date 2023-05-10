@@ -15,6 +15,11 @@ class Frontier(object):
         # Make to_be_downloaded a dictionary of queues, where the key is the hostname
         self.to_be_downloaded = dict()
 
+        DOMAINS = ["ics.uci.edu","cs.uci.edu","informatics.uci.edu","stat.uci.edu"]
+        for domain in DOMAINS:
+            self.to_be_downloaded[domain] = Queue()
+            self.to_be_downloaded[domain].put("https://www." + domain)
+
         # Make a counter to keep track of which hostname to get from the dictionary
         self.current_hostname_key_counter = 0
 
@@ -42,6 +47,7 @@ class Frontier(object):
                     self.add_url(url)
     
     def add_to_to_be_downloaded(self, url):
+        print("Adding to to_be_downloaded: " + url)
         hostname = urllib.parse.urlparse(url).hostname
         if hostname not in self.to_be_downloaded.keys():
             self.to_be_downloaded[hostname] = Queue()
@@ -62,6 +68,8 @@ class Frontier(object):
 
     def get_tbd_url(self):
         try:
+            if len(self.to_be_downloaded.keys()) == 0:
+                return None
             # Get the index from the dictionary using the counter ran as a modulo of the length of the dictionary
             index = self.current_hostname_key_counter % len(self.to_be_downloaded.keys())
 
@@ -79,7 +87,7 @@ class Frontier(object):
                 # Return another call to get_tbd_url
                 return self.get_tbd_url()
             
-            current_hostname_key_counter += 1
+            self.current_hostname_key_counter += 1
             
             return value
         except IndexError:
@@ -91,7 +99,7 @@ class Frontier(object):
         if urlhash not in self.save:
             self.save[urlhash] = (url, False)
             self.save.sync()
-            self.to_be_downloaded.append(url)
+            self.add_to_to_be_downloaded(url)
     
     def mark_url_complete(self, url):
         urlhash = get_urlhash(url)
