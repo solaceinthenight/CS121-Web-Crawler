@@ -2,6 +2,7 @@ import os
 import logging
 from hashlib import sha256
 from urllib.parse import urlparse
+import urllib
 
 def get_logger(name, filename=None):
     logger = logging.getLogger(name)
@@ -33,3 +34,10 @@ def normalize(url):
     if url.endswith("/"):
         return url.rstrip("/")
     return url
+
+
+def hostname_ify(url):
+        hostname = urllib.parse.urlparse(url).hostname
+        if hostname.startswith("www."):
+            hostname = hostname[4:]
+        return hostname

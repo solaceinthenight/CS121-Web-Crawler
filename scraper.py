@@ -7,7 +7,9 @@ from urllib.robotparser import RobotFileParser
 from urllib.parse import urlparse, urldefrag
 from bs4 import BeautifulSoup
 from hashlib import blake2b
+import shelve
 import time
+from threading import RLock
 
 GOOD_RESP = range(200,400)
 USER_AGENT = 'my-user-agent'
@@ -19,6 +21,9 @@ bad_url_count = dict()
 banned_domains = set()
 subdomains = dict()
 info_value = 0
+
+
+global_lock = RLock()
 
 going_to_visit = set()
 
@@ -103,6 +108,13 @@ def check_similarity(fingerprint): # returns a boolean, True if similiar, False 
 
 
 def scraper(url, resp):
+    global going_to_visit
+    global global_site
+    global token_map
+    global fingerprints
+    global global_lock
+
+    global_lock.acquire()
     start_time = time.time()
     try:
         links = extract_next_links(url, resp)
@@ -121,6 +133,8 @@ def scraper(url, resp):
     except Exception as e:
         debug("Scraper failed")
         return list()
+    finally:
+        global_lock.release()
 
 
 
@@ -250,20 +264,25 @@ def extract_next_links(url, resp):
 
        
         raw_text = string_document.get_text() #string_document.text_content()
+        # remove whitespace extra whitespace 
         
+        raw_text = re.sub(r'\s+', ' ', raw_text)
+      
         # if word count too low or high, disregard file, used link below to determine minimum, and maximum is 100x that
         # https://whiteboard-mktg.com/blog/how-much-content-is-good-for-seo-rankings/#:~:text=Forbes%20indicates%20that%20an%20average,rank%20as%20highly%20in%20search.
-        if(not (300 < len(raw_text.split()) < 30000)):
-            debug("Word count too low or high")
-            return list()
-        
+
         global_site.add(final_url)
         
         # get word count by using tokenizer
         words = tokenize(raw_text)
+        if(not (30 < len(words) < 30000)):
+            debug("Word count too low or high")
+            return list()
+        
         if len(words) > total_words:
             total_words = len(words)
             longest_page = final_url
+        
 
         # calculate the information value of each page by comparing it's unique words to total words
         # if total_words > 0:
