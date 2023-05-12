@@ -272,7 +272,7 @@ def extract_next_links(url, resp):
         # if word count too low or high, disregard file, used link below to determine minimum, and maximum is 100x that
         # https://whiteboard-mktg.com/blog/how-much-content-is-good-for-seo-rankings/#:~:text=Forbes%20indicates%20that%20an%20average,rank%20as%20highly%20in%20search.
 
-        global_site.add(final_url)
+        
         
         # if it is bigger than 4 mb, disregard
         # using this as a reference for 4mb https://www.seoptimer.com/blog/webpage-size/#:~:text=Fast%20forward%20to%20September%202022,and%201%2C818%20KB%20for%20images
@@ -291,6 +291,9 @@ def extract_next_links(url, resp):
         if len(words) > total_words:
             total_words = len(words)
             longest_page = final_url
+
+        
+        global_site.add(final_url)
         
 
         # calculate the information value of each page by comparing it's unique words to total words
