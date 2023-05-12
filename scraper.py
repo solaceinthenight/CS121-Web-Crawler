@@ -164,8 +164,9 @@ def write_results():
         l = sorted(l, key=lambda z: (-z[1],z[0]))
         for i in range(0,min(50, len(l))):
             file1.write(str(l[i]) + "\n")
+        # key= 
         file1.write("\nSubdomains of ics.uci.edu:\n")
-        for k in sorted(subdomains.keys()):
+        for k in sorted(subdomains.keys(), key=lambda z: urlparse(z).hostname):
             v = subdomains[k]
             file1.write(k + ": " + str(v) + "\n")
 
@@ -273,8 +274,16 @@ def extract_next_links(url, resp):
 
         global_site.add(final_url)
         
+        # if it is bigger than 4 mb, disregard
+        # using this as a reference for 4mb https://www.seoptimer.com/blog/webpage-size/#:~:text=Fast%20forward%20to%20September%202022,and%201%2C818%20KB%20for%20images
+        
+        if len(raw_text.encode('utf-8')) > 4000000:
+            debug("File size too large")
+            return list()
         # get word count by using tokenizer
         words = tokenize(raw_text)
+
+
         if(not (30 < len(words) < 30000)):
             debug("Word count too low or high")
             return list()
