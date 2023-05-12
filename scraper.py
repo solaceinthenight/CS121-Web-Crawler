@@ -284,7 +284,7 @@ def extract_next_links(url, resp):
         words = tokenize(raw_text)
 
 
-        if(not (30 < len(words) < 30000)):
+        if(not (30 < len(words) < 4000)):
             debug("Word count too low or high")
             return list()
         
