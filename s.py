@@ -7,7 +7,9 @@ from urllib.robotparser import RobotFileParser
 from urllib.parse import urlparse, urldefrag
 from bs4 import BeautifulSoup
 from hashlib import blake2b
+import shelve
 import time
+from threading import RLock
 
 GOOD_RESP = range(200,400)
 USER_AGENT = 'my-user-agent'
@@ -20,6 +22,9 @@ banned_domains = set()
 subdomains = dict()
 info_value = 0
 
+
+global_lock = RLock()
+
 going_to_visit = set()
 
 global_site = set()
@@ -31,6 +36,10 @@ fingerprints = set()
 stopwords = ['a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', "aren't", 'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', "can't", 'cannot', 'could', "couldn't", 'did', "didn't", 'do', 'does', "doesn't", 'doing', "don't", 'down', 'during', 'each', 'few', 'for', 'from', 'further', 'had', "hadn't", 'has', "hasn't", 'have', "haven't", 'having', 'he', "he'd", "he'll", "he's", 'her', 'here', "here's", 'hers', 'herself', 'him', 'himself', 'his', 'how', "how's", 'i', "i'd", "i'll", "i'm", "i've", 'if', 'in', 'into', 'is', "isn't", 'it', "it's", 'its', 'itself', "let's", 'me', 'more', 'most', "mustn't", 'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', "shan't", 'she', "she'd", "she'll", "she's", 'should', "shouldn't", 'so', 'some', 'such', 'than', 'that', "that's", 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', "there's", 'these', 'they', "they'd", "they'll", "they're", "they've", 'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was', "wasn't", 'we', "we'd", "we'll", "we're", "we've", 'were', "weren't", 'what', "what's", 'when', "when's", 'where', "where's", 'which', 'while', 'who', "who's", 'whom', 'why', "why's", 'with', "won't", 'would', "wouldn't", 'you', "you'd", "you'll", "you're", "you've", 'your', 'yours', 'yourself', 'yourselves']
 
 
+DEBUG = False
+def debug(msg):
+    if DEBUG:
+        print(msg)
 # checks if a string is ascii
 def url_ascii(url):
     return all(ord(c) < 128 for c in url)
@@ -61,17 +70,13 @@ def gen_hash(token):
 
 def gen_fingerprint(tokens_dict):
     NUM_BITS = 128 # number of bits generated for each hash
-    WORDS = 500 # limit of unique tokens to take in
-    
+
     hash_list = list() # list of tuples (hash, multiplier)
-    vector_v = list() # to be formed by summing weights
-    counter = 0
+    vector_v = list() # to be formed by summing weights 
     total_count = sum(tokens_dict.values())
     for token, count in tokens_dict.items():
         hash_list.append((gen_hash(token), count)) # dividing to normalize counts
-        counter += 1
-        if counter == WORDS:
-            break
+
     
     mask = 1
     for i in range(NUM_BITS):
@@ -91,7 +96,7 @@ def gen_fingerprint(tokens_dict):
 def check_similarity(fingerprint): # returns a boolean, True if similiar, False if not similar
     global fingerprints
     NUM_BITS = 128
-    SIMILARITY_THRESHOLD = 0.90
+    SIMILARITY_THRESHOLD = 0.95
     
     if fingerprint in fingerprints: # Exact Match
         return True
@@ -103,6 +108,13 @@ def check_similarity(fingerprint): # returns a boolean, True if similiar, False 
 
 
 def scraper(url, resp):
+    global going_to_visit
+    global global_site
+    global token_map
+    global fingerprints
+    global global_lock
+
+    global_lock.acquire()
     start_time = time.time()
     try:
         links = extract_next_links(url, resp)
@@ -114,13 +126,15 @@ def scraper(url, resp):
             with open("valid.txt", "a") as file1:
                 file1.write(str(link) + " is " + str(valid) + "\n")
         end_time = time.time()
-        print("Scraping took " + str(end_time - start_time) + " seconds")
+        debug("Scraping took " + str(end_time - start_time) + " seconds")
         for link in link_results:
             going_to_visit.add(link)
         return link_results
     except Exception as e:
-        print("Scraper failed")
+        debug("Scraper failed")
         return list()
+    finally:
+        global_lock.release()
 
 
 
@@ -139,7 +153,7 @@ def write_results():
     global token_map
     global subdomains
 
-    print("Writing results to file")
+    debug("Writing results to file")
 
     
     with open("result1.txt", "w+") as file1:
@@ -150,8 +164,9 @@ def write_results():
         l = sorted(l, key=lambda z: (-z[1],z[0]))
         for i in range(0,min(50, len(l))):
             file1.write(str(l[i]) + "\n")
+        # key= 
         file1.write("\nSubdomains of ics.uci.edu:\n")
-        for k in sorted(subdomains.keys()):
+        for k in sorted(subdomains.keys(), key=lambda z: urlparse(z).hostname):
             v = subdomains[k]
             file1.write(k + ": " + str(v) + "\n")
 
@@ -161,20 +176,6 @@ def tokenize(text):
     tokens = re.findall(comp, text)
     tokens = [t.lower() for t in tokens if len(t) > 1]
     return tokens
-
-def compute_word_frequencies(token_list): # Makes use of the global token_map
-    # the for loop adds a token to the dict if it does not already exist as a key, and then increments an existing
-    # token key if it shows up again
-    global token_map
-    global stopwords
-    
-    
-    for token in token_list:
-        if token not in stopwords:
-            if token_map.get(token):
-                token_map[token] += 1
-            else:
-                token_map[token] = 1
 
 def compute_word_count(token_list) -> dict:
     global stopwords
@@ -214,13 +215,13 @@ def extract_next_links(url, resp):
     #         resp.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.content
     # append "/robots.txt"
-    # print("url: ", url) 
+    # debug("url: ", url) 
     try:
         # change to actual url
 
         # checks if the raw response has actual content (pages with no content are low information value)
         if resp is None:
-            print("resp is None")
+            debug("resp is None")
             return list()
 
         # change to actual url
@@ -229,14 +230,14 @@ def extract_next_links(url, resp):
 
         # checks if the starting frontier url is valid
         if is_valid(url) == False:
-            print("url is not valid at frontier")
+            debug("url is not valid at frontier")
             return list()
 
 
 
         # checks to ensure a 200 status
         if resp.status < GOOD_RESP[0] or resp.status > GOOD_RESP[-1]:
-            print("resp status is not 200")
+            debug("resp status is not 200")
             return list()
 
         # add url after it passes all checks, but remove fragment
@@ -250,38 +251,51 @@ def extract_next_links(url, resp):
 
        
         raw_text = string_document.get_text() #string_document.text_content()
+        # remove whitespace extra whitespace 
         
+        raw_text = re.sub(r'\s+', ' ', raw_text)
+      
         # if word count too low or high, disregard file, used link below to determine minimum, and maximum is 100x that
         # https://whiteboard-mktg.com/blog/how-much-content-is-good-for-seo-rankings/#:~:text=Forbes%20indicates%20that%20an%20average,rank%20as%20highly%20in%20search.
-        if(not (300 < len(raw_text.split()) < 30000)):
-            print("Word count too low or high")
+
+        
+        
+        # if it is bigger than 4 mb, disregard
+        # using this as a reference for 4mb https://www.seoptimer.com/blog/webpage-size/#:~:text=Fast%20forward%20to%20September%202022,and%201%2C818%20KB%20for%20images
+        if len(raw_text.encode('utf-8')) > 4000000:
+            debug("File size too large")
             return list()
         
-        global_site.add(final_url)
-        
-        # get word count by using tokenizer
+        # make a list of every token, even if it repeats
         words = tokenize(raw_text)
-        if len(words) > total_words:
-            total_words = len(words)
+
+
+        total_count_webpage = len(words)
+
+        if not 50 < total_count_webpage < 30000:
+            return list()
+        
+        if total_count_webpage > total_words:
+            total_words = total_count_webpage
             longest_page = final_url
 
-        # calculate the information value of each page by comparing it's unique words to total words
-        # if total_words > 0:
-        #     info_value = len(set(total_words)) / len(total_words) 
-        # else:
-        #     info_value = 0
-        
         # update token map without stop words
         wc = compute_word_count(words)
-        append_word_count(wc)
+
+        if(not (30 < len(wc) < 4000)):
+            debug("Word count too low or high")
+            return list()
 
         # Check if duplicate/near-duplicate
         fingerprint = gen_fingerprint(wc)
         
         if check_similarity(fingerprint):
-            print("Duplicate/near-duplicate detected")
+            debug("Duplicate/near-duplicate detected")
             return list()
+        
+        append_word_count(wc)
         fingerprints.add(fingerprint)
+        global_site.add(final_url)
 
         
         parsed_domain =  urlparse(final_url)
@@ -325,7 +339,7 @@ def extract_next_links(url, resp):
             final_list.append(link)
         return final_list
     except Exception as e:
-        print("Hello im here: ")
+        debug("Hello im here: ")
         print(e)
         write_results()
         return []
@@ -349,20 +363,20 @@ def is_valid(url):
 
         # return fals eif not in http or https
         if parsed.scheme not in set(["http", "https"]) or not parsed.hostname:
-            print("scheme not in http or https")
+            debug("scheme not in http or https")
             return False
 
         if parsed.hostname in banned_domains:
-            print("hostname in banned domains")
+            debug("hostname in banned domains")
             return False
         
         if url_ascii(url) == False:
-            print("url is not ascii")
+            debug("url is not ascii")
             return False
         
 
         if not check_url_for_robots:
-            print("url is not robots.txt")
+            debug("url is not robots.txt")
             return False
         
         # return false if there is a non text file
@@ -375,23 +389,23 @@ def is_valid(url):
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower()):
-            print("url is not a text file")
+            debug("url is not a text file")
             return False
         
         # check if the url is a valid domain
         if not re.match(r"(.+\.)?ics\.uci\.edu|(.+\.)?cs\.uci\.edu|(.+\.)?informatics\.uci\.edu|(.+\.)?stat\.uci\.edu", parsed.hostname.lower()):
-            print("url is not a valid domain")
+            debug("url is not a valid domain")
             return False
         
         # checks if the url has a repeating directory in the path to prevent traps
         # does not cover pages that may have been revisted before the second occurence of the directory in question
         if re.match(r"^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$", parsed.path.lower()):
-            print("url has a repeating directory")
+            debug("url has a repeating directory")
             return False
 
         # checks if the url is already in the global set to prevent traps
         if url in global_site:
-            print("url is already in global set")
+            debug("url is already in global set")
             return False
         
         # return true if nothing fails in the if checks
