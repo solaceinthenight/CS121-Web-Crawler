@@ -177,20 +177,6 @@ def tokenize(text):
     tokens = [t.lower() for t in tokens if len(t) > 1]
     return tokens
 
-def compute_word_frequencies(token_list): # Makes use of the global token_map
-    # the for loop adds a token to the dict if it does not already exist as a key, and then increments an existing
-    # token key if it shows up again
-    global token_map
-    global stopwords
-    
-    
-    for token in token_list:
-        if token not in stopwords:
-            if token_map.get(token):
-                token_map[token] += 1
-            else:
-                token_map[token] = 1
-
 def compute_word_count(token_list) -> dict:
     global stopwords
 
@@ -276,32 +262,29 @@ def extract_next_links(url, resp):
         
         # if it is bigger than 4 mb, disregard
         # using this as a reference for 4mb https://www.seoptimer.com/blog/webpage-size/#:~:text=Fast%20forward%20to%20September%202022,and%201%2C818%20KB%20for%20images
-        
         if len(raw_text.encode('utf-8')) > 4000000:
             debug("File size too large")
             return list()
-        # get word count by using tokenizer
+        
+        # make a list of every token, even if it repeats
         words = tokenize(raw_text)
 
 
-        if(not (30 < len(words) < 4000)):
-            debug("Word count too low or high")
+        total_count_webpage = len(words)
+
+        if not 50 < total_count_webpage < 30000:
             return list()
         
-        if len(words) > total_words:
-            total_words = len(words)
+        if total_count_webpage > total_words:
+            total_words = total_count_webpage
             longest_page = final_url
 
-
-        # calculate the information value of each page by comparing it's unique words to total words
-        # if total_words > 0:
-        #     info_value = len(set(total_words)) / len(total_words) 
-        # else:
-        #     info_value = 0
-        
         # update token map without stop words
         wc = compute_word_count(words)
-        append_word_count(wc)
+
+        if(not (30 < len(wc) < 4000)):
+            debug("Word count too low or high")
+            return list()
 
         # Check if duplicate/near-duplicate
         fingerprint = gen_fingerprint(wc)
@@ -309,8 +292,9 @@ def extract_next_links(url, resp):
         if check_similarity(fingerprint):
             debug("Duplicate/near-duplicate detected")
             return list()
+        
+        append_word_count(wc)
         fingerprints.add(fingerprint)
-
         global_site.add(final_url)
 
         
