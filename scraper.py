@@ -292,9 +292,6 @@ def extract_next_links(url, resp):
             total_words = len(words)
             longest_page = final_url
 
-        
-        global_site.add(final_url)
-        
 
         # calculate the information value of each page by comparing it's unique words to total words
         # if total_words > 0:
@@ -313,6 +310,8 @@ def extract_next_links(url, resp):
             debug("Duplicate/near-duplicate detected")
             return list()
         fingerprints.add(fingerprint)
+
+        global_site.add(final_url)
 
         
         parsed_domain =  urlparse(final_url)
