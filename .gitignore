@@ -110,3 +110,6 @@ venv.bak/
 *.shelve
 
 runtest.py
+
+
+valid.txt
